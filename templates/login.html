@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f0f1a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>IIM Sambalpur – Timetable</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="auth-page">
+  <div class="auth-bg">
+    <div class="auth-glow glow-1"></div>
+    <div class="auth-glow glow-2"></div>
+    <div class="auth-glow glow-3"></div>
+    <div class="particles" id="particles"></div>
+  </div>
+
+  <div class="auth-container">
+    <div class="auth-card" id="authCard">
+      <!-- Logo / Header -->
+      <div class="auth-header">
+        <div class="auth-logo">
+          <div class="logo-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="10" fill="url(#logoGrad)"/>
+              <path d="M8 22l4-12h8l4 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 18h12" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              <defs>
+                <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
+                  <stop stop-color="#6366f1"/>
+                  <stop offset="1" stop-color="#a855f7"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <div>
+            <div class="logo-title">IIM Sambalpur</div>
+            <div class="logo-sub">MBA BA 2026–28</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Switcher -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">Sign In</button>
+        <button class="auth-tab" id="tabRegister" onclick="switchTab('register')">Register</button>
+      </div>
+
+      <!-- Flash messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for cat, msg in messages %}
+            <div class="flash-msg flash-{{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <!-- Error banner -->
+      <div class="error-banner" id="errorBanner" style="display:none"></div>
+
+      <!-- Login Form -->
+      <form id="loginForm" class="auth-form" style="{{ 'display:none' if mode == 'register' else '' }}">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input type="text" id="loginUsername" name="username" class="form-input" placeholder="Enter username" autocomplete="username" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" id="loginPassword" name="password" class="form-input" placeholder="Enter password" autocomplete="current-password" required />
+            <button type="button" class="toggle-pw" onclick="togglePw('loginPassword', this)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary btn-full" id="loginBtn">
+          <span class="btn-text">Sign In</span>
+          <span class="btn-spinner" style="display:none">
+            <svg class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          </span>
+        </button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" class="auth-form" style="{{ '' if mode == 'register' else 'display:none' }}">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input type="text" id="regUsername" name="username" class="form-input" placeholder="Choose a username" autocomplete="username" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <input type="email" id="regEmail" name="email" class="form-input" placeholder="your@email.com" autocomplete="email" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" id="regPassword" name="password" class="form-input" placeholder="Choose a password" autocomplete="new-password" required />
+            <button type="button" class="toggle-pw" onclick="togglePw('regPassword', this)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary btn-full" id="regBtn">
+          <span class="btn-text">Create Account</span>
+          <span class="btn-spinner" style="display:none">
+            <svg class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          </span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tab) {
+      document.getElementById('loginForm').style.display = tab === 'login' ? '' : 'none';
+      document.getElementById('registerForm').style.display = tab === 'register' ? '' : 'none';
+      document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+      document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+      document.getElementById('errorBanner').style.display = 'none';
+    }
+
+    {% if mode == 'register' %}
+    switchTab('register');
+    {% endif %}
+
+    function showError(msg) {
+      const b = document.getElementById('errorBanner');
+      b.textContent = msg;
+      b.style.display = 'block';
+      b.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function setLoading(btnId, loading) {
+      const btn = document.getElementById(btnId);
+      btn.querySelector('.btn-text').style.display = loading ? 'none' : '';
+      btn.querySelector('.btn-spinner').style.display = loading ? '' : 'none';
+      btn.disabled = loading;
+    }
+
+    function togglePw(id, btn) {
+      const inp = document.getElementById(id);
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      setLoading('loginBtn', true);
+      document.getElementById('errorBanner').style.display = 'none';
+      try {
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('loginUsername').value,
+            password: document.getElementById('loginPassword').value
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.location.href = '/';
+        } else {
+          showError(data.error || 'Login failed');
+        }
+      } catch (err) {
+        showError('Connection error. Please try again.');
+      } finally {
+        setLoading('loginBtn', false);
+      }
+    });
+
+    document.getElementById('registerForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      setLoading('regBtn', true);
+      document.getElementById('errorBanner').style.display = 'none';
+      try {
+        const res = await fetch('/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('regUsername').value,
+            email: document.getElementById('regEmail').value,
+            password: document.getElementById('regPassword').value
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.location.href = '/';
+        } else {
+          showError(data.error || 'Registration failed');
+        }
+      } catch (err) {
+        showError('Connection error. Please try again.');
+      } finally {
+        setLoading('regBtn', false);
+      }
+    });
+
+    // Particle animation
+    const container = document.getElementById('particles');
+    for (let i = 0; i < 20; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;width:${2+Math.random()*4}px;height:${2+Math.random()*4}px;animation-delay:${Math.random()*8}s;animation-duration:${6+Math.random()*8}s;`;
+      container.appendChild(p);
+    }
+  </script>
+</body>
+</html>
