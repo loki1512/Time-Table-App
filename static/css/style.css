@@ -774,6 +774,33 @@ input, select, textarea { font-family: var(--font); }
   line-height: 1.5;
 }
 
+/* Clickable course card (when link is set) */
+a.course-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+a.course-card-link:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(99,102,241,0.2);
+  border-color: var(--course-color, var(--accent));
+}
+.course-link-hint {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--course-color, var(--accent));
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.85;
+  transition: opacity 0.2s;
+}
+a.course-card-link:hover .course-link-hint {
+  opacity: 1;
+}
+
 /* ─── NOTIFICATIONS VIEW ──────────────────────────────────────────────────────── */
 .notif-container {
   max-width: 480px;

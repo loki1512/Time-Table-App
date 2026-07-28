@@ -47,6 +47,7 @@ class Course(db.Model):
     faculty = db.Column(db.String(300))
     short_name = db.Column(db.String(20))  # e.g., "FRA", "MM", "DS-I"
     color = db.Column(db.String(7), default='#6366f1')  # hex color
+    course_link = db.Column(db.String(500), nullable=True)  # optional URL to course page
 
     def to_dict(self):
         return {
@@ -57,7 +58,8 @@ class Course(db.Model):
             'area': self.area,
             'faculty': self.faculty,
             'short_name': self.short_name,
-            'color': self.color
+            'color': self.color,
+            'course_link': self.course_link or ''
         }
 
 
@@ -473,6 +475,7 @@ def create_course():
         faculty=data.get('faculty', ''),
         short_name=data.get('short_name', ''),
         color=data.get('color', '#6366f1'),
+        course_link=data.get('course_link', '') or None,
     )
     db.session.add(course)
     db.session.commit()
@@ -491,6 +494,8 @@ def update_course(course_id):
     for field in ['code', 'name', 'credits', 'area', 'faculty', 'short_name', 'color']:
         if field in data:
             setattr(course, field, data[field])
+    if 'course_link' in data:
+        course.course_link = data['course_link'] or None
     db.session.commit()
     return jsonify(course.to_dict())
 

@@ -236,6 +236,7 @@ async function loadAdminCourses() {
             <span class="acc-tag">${c.credits} credits</span>
             ${c.area ? `<span class="acc-tag">${escHtml(c.area)}</span>` : ''}
             <span class="acc-tag">${escHtml(c.code)}</span>
+            ${c.course_link ? `<a class="acc-tag acc-link-tag" href="${escHtml(c.course_link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🔗 Course Page</a>` : ''}
           </div>
           <div class="acc-faculty">${c.faculty ? escHtml(c.faculty) : '—'}</div>
           <div class="acc-actions">
@@ -261,6 +262,7 @@ function openAddCourseModal() {
   el('courseCredits').value = '3';
   el('courseArea').value = '';
   el('courseFaculty').value = '';
+  el('courseLinkUrl').value = '';
   el('courseColor').value = '#6366f1';
   buildColorPresets();
   el('courseModalOverlay').classList.add('show');
@@ -276,6 +278,7 @@ function openEditCourseModal(c) {
   el('courseCredits').value = c.credits || 3;
   el('courseArea').value = c.area || '';
   el('courseFaculty').value = c.faculty || '';
+  el('courseLinkUrl').value = c.course_link || '';
   el('courseColor').value = c.color || '#6366f1';
   buildColorPresets(c.color);
   el('courseModalOverlay').classList.add('show');
@@ -309,6 +312,7 @@ async function saveCourse() {
     area: el('courseArea').value,
     faculty: el('courseFaculty').value,
     color: el('courseColor').value,
+    course_link: el('courseLinkUrl').value.trim() || '',
   };
   try {
     if (editingCourseId) {

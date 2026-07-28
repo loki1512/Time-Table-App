@@ -151,6 +151,19 @@
   text-transform: uppercase;
 }
 
+a.acc-link-tag {
+  background: rgba(99,102,241,0.12);
+  border-color: rgba(99,102,241,0.3);
+  color: var(--accent);
+  text-decoration: none;
+  text-transform: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+a.acc-link-tag:hover {
+  background: rgba(99,102,241,0.22);
+}
+
 .acc-faculty {
   font-size: 11px;
   color: var(--text-3);

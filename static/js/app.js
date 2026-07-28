@@ -448,8 +448,9 @@ async function loadCourses() {
       el('coursesGrid').innerHTML = `<div class="empty-state"><span class="empty-icon">📚</span><div class="empty-title">No courses</div></div>`;
       return;
     }
-    el('coursesGrid').innerHTML = courses.map(c => `
-      <div class="course-card" style="--course-color:${c.color}">
+    el('coursesGrid').innerHTML = courses.map(c => {
+      const hasLink = c.course_link && c.course_link.trim() !== '';
+      const cardContent = `
         <div class="course-abbr">${escHtml(c.short_name || c.code)}</div>
         <div class="course-name">${escHtml(c.name)}</div>
         <div class="course-meta">
@@ -458,7 +459,12 @@ async function loadCourses() {
           <span class="course-tag">${escHtml(c.code)}</span>
         </div>
         ${c.faculty ? `<div class="course-faculty">👤 ${escHtml(c.faculty)}</div>` : ''}
-      </div>`).join('');
+        ${hasLink ? `<div class="course-link-hint">View Course →</div>` : ''}`;
+      if (hasLink) {
+        return `<a class="course-card course-card-link" href="${escHtml(c.course_link)}" target="_blank" rel="noopener" style="--course-color:${c.color}">${cardContent}</a>`;
+      }
+      return `<div class="course-card" style="--course-color:${c.color}">${cardContent}</div>`;
+    }).join('');
   } catch (err) {
     el('coursesGrid').innerHTML = `<div class="empty-state"><div class="empty-title">Failed to load</div></div>`;
   }
