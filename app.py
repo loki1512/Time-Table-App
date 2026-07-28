@@ -320,7 +320,9 @@ def admin():
     courses = Course.query.all()
     return render_template('admin.html', user=current_user, slots=SLOTS, courses=courses)
 
-
+@app.route('health')
+def health():
+    return jsonify({'status': 'ok', 'database': 'connected'})
 # ─── API ROUTES ────────────────────────────────────────────────────────────────
 
 @app.route('/api/today')
