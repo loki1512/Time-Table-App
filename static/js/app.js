@@ -461,7 +461,7 @@ async function loadCourses() {
         ${c.faculty ? `<div class="course-faculty">👤 ${escHtml(c.faculty)}</div>` : ''}
         ${hasLink ? `<div class="course-link-hint">View Course →</div>` : ''}`;
       if (hasLink) {
-        return `<a class="course-card course-card-link" href="${escHtml(c.course_link)}" target="_blank" rel="noopener" style="--course-color:${c.color}">${cardContent}</a>`;
+        return `<a class="course-card course-card-link" href="${escHtml(c.course_link)}" target="_blank" rel="noopener" onclick="window.open(this.href, '_blank'); return false;" style="--course-color:${c.color}">${cardContent}</a>`;
       }
       return `<div class="course-card" style="--course-color:${c.color}">${cardContent}</div>`;
     }).join('');

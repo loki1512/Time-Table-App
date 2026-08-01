@@ -36,6 +36,11 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
+  // Skip cross-origin requests (prevents breaking external links in PWAs)
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   // Always fetch API calls from network
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/login') || url.pathname.startsWith('/logout')) {
     event.respondWith(
