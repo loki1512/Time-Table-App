@@ -374,7 +374,7 @@ def api_today():
         'date': today.isoformat(),
         'day': today.strftime('%A'),
         'sessions': [s.to_dict() for s in sessions],
-        'slots': SLOTS
+        'slots': get_slots_dict()
     })
 
 
@@ -464,7 +464,7 @@ def create_session():
 
     # Validate slot
     slot = int(data.get('slot', 1))
-    if slot not in SLOTS:
+    if not TimeSlot.query.filter_by(slot_number=slot).first():
         return jsonify({'error': 'Invalid slot'}), 400
 
     # Check if session already exists
