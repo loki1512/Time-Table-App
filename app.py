@@ -77,13 +77,14 @@ class ClassSession(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def to_dict(self):
-        slot_times = {1: '09:30 AM', 2: '11:30 AM', 3: '02:00 PM', 4: '04:00 PM'}
+        slot_obj = TimeSlot.query.filter_by(slot_number=self.slot).first()
+        slot_time = slot_obj.start_time if slot_obj else ''
         return {
             'id': self.id,
             'date': self.date.isoformat(),
             'day_name': self.day_name,
             'slot': self.slot,
-            'slot_time': slot_times.get(self.slot, ''),
+            'slot_time': slot_time,
             'subject_raw': self.subject_raw,
             'course': self.course.to_dict() if self.course else None,
             'is_special': self.is_special,
@@ -103,18 +104,55 @@ class Notification(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class TimeSlot(db.Model):
+    """Configurable time slot definitions."""
+    id = db.Column(db.Integer, primary_key=True)
+    slot_number = db.Column(db.Integer, nullable=False, unique=True)  # 1, 2, 3, 4…
+    label = db.Column(db.String(50), nullable=False)        # e.g. '09:30 AM – 11:00 AM'
+    start_time = db.Column(db.String(5), nullable=False)    # 'HH:MM' 24h
+    end_time = db.Column(db.String(5), nullable=False)      # 'HH:MM' 24h
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'slot_number': self.slot_number,
+            'label': self.label,
+            'start_time': self.start_time,
+            'end_time': self.end_time,
+        }
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
-# ─── SLOT TIME CONSTANTS ───────────────────────────────────────────────────────
-SLOTS = {
-    1: {'label': '09:30 AM – 11:00 AM', 'start': '09:30', 'end': '11:00'},
-    2: {'label': '11:30 AM – 01:00 PM', 'start': '11:30', 'end': '13:00'},
-    3: {'label': '02:00 PM – 03:30 PM', 'start': '14:00', 'end': '15:30'},
-    4: {'label': '04:00 PM – 05:30 PM', 'start': '16:00', 'end': '17:30'},
-}
+# ─── SLOT CONSTANTS & HELPERS ─────────────────────────────────────────────────
+
+DEFAULT_SLOTS = [
+    {'slot_number': 1, 'label': '09:30 AM – 11:00 AM', 'start_time': '09:30', 'end_time': '11:00'},
+    {'slot_number': 2, 'label': '11:30 AM – 01:00 PM', 'start_time': '11:30', 'end_time': '13:00'},
+    {'slot_number': 3, 'label': '02:00 PM – 03:30 PM', 'start_time': '14:00', 'end_time': '15:30'},
+    {'slot_number': 4, 'label': '04:00 PM – 05:30 PM', 'start_time': '16:00', 'end_time': '17:30'},
+]
+
+
+def get_slots_dict():
+    """Return slot dict from DB, falling back to DEFAULT_SLOTS if table is empty."""
+    slots = TimeSlot.query.order_by(TimeSlot.slot_number).all()
+    if slots:
+        return {s.slot_number: {'label': s.label, 'start': s.start_time, 'end': s.end_time} for s in slots}
+    return {d['slot_number']: {'label': d['label'], 'start': d['start_time'], 'end': d['end_time']} for d in DEFAULT_SLOTS}
+
+
+def seed_default_slots():
+    """Seed default time slots on first run."""
+    if TimeSlot.query.count() == 0:
+        for d in DEFAULT_SLOTS:
+            db.session.add(TimeSlot(**d))
+        db.session.commit()
+        print('[OK] Default time slots seeded.')
 
 COURSE_COLORS = [
     '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b',
@@ -634,6 +672,78 @@ def create_default_admin():
         db.session.add(admin)
         db.session.commit()
         print('[OK] Default admin created: admin / admin123')
+    seed_default_slots()
+
+
+# ─── SLOT API ─────────────────────────────────────────────────────────────────────────
+
+@app.route('/api/slots')
+@login_required
+def api_slots():
+    slots = TimeSlot.query.order_by(TimeSlot.slot_number).all()
+    if not slots:
+        return jsonify(DEFAULT_SLOTS)
+    return jsonify([s.to_dict() for s in slots])
+
+
+@app.route('/api/slots', methods=['POST'])
+@login_required
+def create_slot():
+    if not current_user.is_admin:
+        return jsonify({'error': 'Admin only'}), 403
+    data = request.get_json()
+    slot_number = data.get('slot_number')
+    if not slot_number or not isinstance(slot_number, int):
+        return jsonify({'error': 'slot_number is required and must be an integer'}), 400
+    if TimeSlot.query.filter_by(slot_number=slot_number).first():
+        return jsonify({'error': f'Slot number {slot_number} already exists'}), 409
+    slot = TimeSlot(
+        slot_number=slot_number,
+        label=data.get('label', f'Slot {slot_number}'),
+        start_time=data.get('start_time', '00:00'),
+        end_time=data.get('end_time', '00:00'),
+    )
+    db.session.add(slot)
+    db.session.commit()
+    return jsonify(slot.to_dict()), 201
+
+
+@app.route('/api/slots/<int:slot_id>', methods=['PUT'])
+@login_required
+def update_slot(slot_id):
+    if not current_user.is_admin:
+        return jsonify({'error': 'Admin only'}), 403
+    slot = db.session.get(TimeSlot, slot_id)
+    if not slot:
+        return jsonify({'error': 'Not found'}), 404
+    data = request.get_json()
+    for field in ['label', 'start_time', 'end_time']:
+        if field in data:
+            setattr(slot, field, data[field])
+    if 'slot_number' in data:
+        new_num = int(data['slot_number'])
+        existing = TimeSlot.query.filter_by(slot_number=new_num).first()
+        if existing and existing.id != slot_id:
+            return jsonify({'error': f'Slot number {new_num} already taken'}), 409
+        slot.slot_number = new_num
+    db.session.commit()
+    return jsonify(slot.to_dict())
+
+
+@app.route('/api/slots/<int:slot_id>', methods=['DELETE'])
+@login_required
+def delete_slot(slot_id):
+    if not current_user.is_admin:
+        return jsonify({'error': 'Admin only'}), 403
+    slot = db.session.get(TimeSlot, slot_id)
+    if not slot:
+        return jsonify({'error': 'Not found'}), 404
+    sessions_using = ClassSession.query.filter_by(slot=slot.slot_number).count()
+    if sessions_using > 0:
+        return jsonify({'error': f'Cannot delete: {sessions_using} session(s) use this slot. Remove them first.'}), 409
+    db.session.delete(slot)
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 if __name__ == '__main__':

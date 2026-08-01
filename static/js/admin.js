@@ -34,7 +34,7 @@ function openSidebar() { el('sidebar').classList.add('open'); el('sidebarOverlay
 function closeSidebar() { el('sidebar').classList.remove('open'); el('sidebarOverlay').classList.remove('show'); }
 
 // ─── ADMIN VIEW SWITCHING ─────────────────────────────────────────────────────
-const adminViews = { sessions: 'Sessions', courses: 'Courses', users: 'Users', import: 'Import Excel' };
+const adminViews = { sessions: 'Sessions', courses: 'Courses', users: 'Users', import: 'Import Excel', slots: 'Time Slots' };
 
 function showAdminView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -65,6 +65,7 @@ function showAdminView(name) {
   if (name === 'sessions') loadAdminSessions();
   if (name === 'courses') loadAdminCourses();
   if (name === 'users') loadAdminUsers();
+  if (name === 'slots') loadAdminSlots();
 }
 
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -72,6 +73,9 @@ function openAddModal() { /* overridden per view */ }
 
 // ─── SESSIONS ─────────────────────────────────────────────────────────────────
 async function loadAdminSessions() {
+  if (!slotsCache || slotsCache.length === 0) {
+    try { slotsCache = await api('/api/slots'); } catch(e) {}
+  }
   const start = el('filterStart').value;
   const end = el('filterEnd').value;
   const params = new URLSearchParams();
@@ -86,6 +90,8 @@ async function loadAdminSessions() {
 }
 
 function slotLabel(slot) {
+  const s = slotsCache.find(x => x.slot_number === slot);
+  if (s) return s.label;
   const m = { 1: '09:30 AM', 2: '11:30 AM', 3: '02:00 PM', 4: '04:00 PM' };
   return m[slot] || `Slot ${slot}`;
 }
@@ -141,12 +147,13 @@ async function openAddSessionModal() {
   el('sessionModalTitle').textContent = 'Add Session';
   el('sessionId').value = '';
   el('sessionDate').value = new Date().toISOString().split('T')[0];
-  el('sessionSlot').value = '1';
-  el('sessionCourse').value = '';
   el('sessionSubject').value = '';
   el('sessionNotes').value = '';
   el('sessionSpecial').checked = false;
-  await loadCoursesIntoSelect();
+  await Promise.all([loadCoursesIntoSelect(), loadSlotsIntoSelect()]);
+  const firstSlot = slotsCache.length > 0 ? slotsCache[0].slot_number : '1';
+  el('sessionSlot').value = firstSlot;
+  el('sessionCourse').value = '';
   el('sessionModalOverlay').classList.add('show');
 }
 
@@ -155,13 +162,12 @@ function openEditSessionModal(s) {
   el('sessionModalTitle').textContent = 'Edit Session';
   el('sessionId').value = s.id;
   el('sessionDate').value = s.date;
-  el('sessionSlot').value = s.slot;
-  el('sessionCourse').value = s.course?.id || '';
   el('sessionSubject').value = s.subject_raw || '';
   el('sessionNotes').value = s.notes || '';
   el('sessionSpecial').checked = s.is_special;
-  loadCoursesIntoSelect().then(() => {
+  Promise.all([loadCoursesIntoSelect(), loadSlotsIntoSelect()]).then(() => {
     el('sessionCourse').value = s.course?.id || '';
+    el('sessionSlot').value = s.slot;
   });
   el('sessionModalOverlay').classList.add('show');
 }
@@ -175,6 +181,16 @@ async function loadCoursesIntoSelect() {
     const cur = sel.value;
     sel.innerHTML = '<option value="">— No course / Special —</option>' +
       coursesCache.map(c => `<option value="${c.id}">${escHtml(c.short_name)} – ${escHtml(c.name)}</option>`).join('');
+    sel.value = cur;
+  } catch (e) {}
+}
+
+async function loadSlotsIntoSelect() {
+  try {
+    slotsCache = await api('/api/slots');
+    const sel = el('sessionSlot');
+    const cur = sel.value;
+    sel.innerHTML = slotsCache.map(s => `<option value="${s.slot_number}">${escHtml(s.label)}</option>`).join('');
     sel.value = cur;
   } catch (e) {}
 }
@@ -399,6 +415,123 @@ async function importExcel() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import Excel Now';
+  }
+}
+
+// ─── TIME SLOTS ──────────────────────────────────────────────────────────────
+let slotsCache = [];
+let editingSlotId = null;
+
+async function loadAdminSlots() {
+  try {
+    const slots = await api('/api/slots');
+    slotsCache = slots;
+    renderAdminSlots(slots);
+  } catch (err) {
+    el('adminSlotsList').innerHTML = `<div class="loading-text">Error: ${err.message}</div>`;
+  }
+}
+
+function renderAdminSlots(slots) {
+  if (!slots || slots.length === 0) {
+    el('adminSlotsList').innerHTML = '<div class="loading-text">No slots defined. Click "Add Slot" to create one.</div>';
+    return;
+  }
+  el('adminSlotsList').innerHTML = slots.map(s => {
+    const num = s.slot_number;
+    const start12 = fmt12(s.start_time);
+    const end12   = fmt12(s.end_time);
+    return `
+      <div class="admin-slot-item">
+        <div class="asi-slot-badge">Slot ${num}</div>
+        <div class="asi-slot-info">
+          <div class="asi-slot-label">${escHtml(s.label)}</div>
+          <div class="asi-slot-time">${start12} &rarr; ${end12}</div>
+        </div>
+        <div class="asi-actions">
+          <button class="action-btn edit" title="Edit" onclick='openEditSlotModal(${JSON.stringify(s)})'>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="action-btn delete" title="Delete" onclick="deleteSlot(${s.id})">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function fmt12(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h < 12 ? 'AM' : 'PM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+function openAddSlotModal() {
+  editingSlotId = null;
+  el('slotModalTitle').textContent = 'Add Time Slot';
+  el('slotId').value = '';
+  const max = slotsCache.reduce((mx, s) => Math.max(mx, s.slot_number || 0), 0);
+  el('slotNumber').value = max + 1;
+  el('slotNumber').readOnly = false;
+  el('slotLabel').value = '';
+  el('slotStart').value = '';
+  el('slotEnd').value = '';
+  el('slotModalOverlay').classList.add('show');
+}
+
+function openEditSlotModal(s) {
+  editingSlotId = s.id;
+  el('slotModalTitle').textContent = 'Edit Time Slot';
+  el('slotId').value = s.id;
+  el('slotNumber').value = s.slot_number;
+  el('slotNumber').readOnly = true;
+  el('slotLabel').value = s.label || '';
+  el('slotStart').value = s.start_time || '';
+  el('slotEnd').value = s.end_time || '';
+  el('slotModalOverlay').classList.add('show');
+}
+
+function closeSlotModal() { el('slotModalOverlay').classList.remove('show'); }
+
+async function saveSlot() {
+  const btn = el('slotSaveBtn');
+  btn.disabled = true;
+  const data = {
+    slot_number: parseInt(el('slotNumber').value),
+    label: el('slotLabel').value.trim(),
+    start_time: el('slotStart').value,
+    end_time: el('slotEnd').value,
+  };
+  if (!data.label)       { showToast('Label is required', 'error'); btn.disabled = false; return; }
+  if (!data.start_time)  { showToast('Start time is required', 'error'); btn.disabled = false; return; }
+  if (!data.end_time)    { showToast('End time is required', 'error'); btn.disabled = false; return; }
+  try {
+    if (editingSlotId) {
+      await api(`/api/slots/${editingSlotId}`, { method: 'PUT', body: JSON.stringify(data) });
+      showToast('Slot updated', 'success');
+    } else {
+      await api('/api/slots', { method: 'POST', body: JSON.stringify(data) });
+      showToast('Slot created', 'success');
+    }
+    closeSlotModal();
+    loadAdminSlots();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function deleteSlot(id) {
+  if (!confirm('Delete this time slot? This will fail if any sessions use it.')) return;
+  try {
+    await api(`/api/slots/${id}`, { method: 'DELETE' });
+    showToast('Slot deleted', 'success');
+    loadAdminSlots();
+  } catch (err) {
+    showToast(err.message, 'error');
   }
 }
 

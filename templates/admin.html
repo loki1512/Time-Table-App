@@ -52,6 +52,10 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           <span>Import Excel</span>
         </button>
+        <button class="nav-item" onclick="showAdminView('slots')" id="navSlots">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Time Slots</span>
+        </button>
       </nav>
 
       <div class="sidebar-footer">
@@ -158,6 +162,25 @@
           </div>
         </section>
 
+        <!-- TIME SLOTS VIEW -->
+        <section class="view" id="adminViewSlots">
+          <div class="slots-container">
+            <div class="slots-header-row">
+              <div>
+                <h2 class="slots-title">Time Slot Definitions</h2>
+                <p class="slots-desc">Manage the time slots used in the timetable. Sessions reference slots by their slot number.</p>
+              </div>
+              <button class="btn-primary btn-sm" onclick="openAddSlotModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Slot
+              </button>
+            </div>
+            <div class="admin-slots-list" id="adminSlotsList">
+              <div class="loading-text">Loading slots...</div>
+            </div>
+          </div>
+        </section>
+
       </div>
     </main>
   </div>
@@ -180,10 +203,7 @@
         <div class="form-group">
           <label class="form-label">Time Slot</label>
           <select id="sessionSlot" class="form-input">
-            <option value="1">09:30 AM – 11:00 AM</option>
-            <option value="2">11:30 AM – 01:00 PM</option>
-            <option value="3">02:00 PM – 03:30 PM</option>
-            <option value="4">04:00 PM – 05:30 PM</option>
+            <option value="">Loading slots...</option>
           </select>
         </div>
         <div class="form-group">
@@ -269,6 +289,43 @@
       <div class="modal-footer">
         <button class="btn-secondary" onclick="closeCourseModal()">Cancel</button>
         <button class="btn-primary" id="courseSaveBtn" onclick="saveCourse()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLOT MODAL -->
+  <div class="modal-overlay" id="slotModalOverlay">
+    <div class="modal" id="slotModal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="slotModalTitle">Add Time Slot</h3>
+        <button class="modal-close" onclick="closeSlotModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="slotId" />
+        <div class="form-group">
+          <label class="form-label">Slot Number <span style="font-weight:400;color:var(--text-3);font-size:12px">(unique integer, used to identify the slot)</span></label>
+          <input type="number" id="slotNumber" class="form-input" min="1" max="20" placeholder="e.g. 5" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Display Label</label>
+          <input type="text" id="slotLabel" class="form-input" placeholder="e.g. 09:30 AM – 11:00 AM" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Start Time (24h)</label>
+            <input type="time" id="slotStart" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">End Time (24h)</label>
+            <input type="time" id="slotEnd" class="form-input" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeSlotModal()">Cancel</button>
+        <button class="btn-primary" id="slotSaveBtn" onclick="saveSlot()">Save</button>
       </div>
     </div>
   </div>

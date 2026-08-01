@@ -409,3 +409,84 @@ a.acc-link-tag:hover {
   transition: var(--transition);
 }
 .color-preset:hover, .color-preset.selected { border-color: white; transform: scale(1.1); }
+
+/* ─── TIME SLOTS VIEW ─────────────────────────────────────────────────────── */
+
+.slots-container {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 24px 0 48px;
+}
+
+.slots-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.slots-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+
+.slots-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  margin: 0;
+}
+
+.admin-slots-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-slot-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  transition: border-color var(--transition);
+}
+
+.admin-slot-item:hover { border-color: var(--border-2); }
+
+.asi-slot-badge {
+  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.asi-slot-info { flex: 1; min-width: 0; }
+
+.asi-slot-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.asi-slot-time {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+
+.asi-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
