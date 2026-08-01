@@ -348,7 +348,7 @@ def register():
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.html', user=current_user, slots=SLOTS)
+    return render_template('index.html', user=current_user, slots=get_slots_dict())
 
 
 @app.route('/admin')
@@ -358,7 +358,7 @@ def admin():
         flash('Admin access required', 'error')
         return redirect(url_for('index'))
     courses = Course.query.all()
-    return render_template('admin.html', user=current_user, slots=SLOTS, courses=courses)
+    return render_template('admin.html', user=current_user, slots=get_slots_dict(), courses=courses)
 
 @app.route('/health')
 def health():
