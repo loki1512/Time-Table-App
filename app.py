@@ -589,12 +589,31 @@ def get_notification_settings():
     })
 
 
+@app.route('/api/admin/excel-files', methods=['GET'])
+@login_required
+def admin_excel_files():
+    if not current_user.is_admin:
+        return jsonify({'error': 'Admin only'}), 403
+    base_dir = os.path.dirname(__file__)
+    files = [f for f in os.listdir(base_dir) if f.endswith('.xlsx')]
+    return jsonify(files)
+
+
 @app.route('/api/admin/import-excel', methods=['POST'])
 @login_required
 def admin_import_excel():
     if not current_user.is_admin:
         return jsonify({'error': 'Admin only'}), 403
-    excel_path = os.path.join(os.path.dirname(__file__), 'MBA BA 2026-28 Term I Schedule .xlsx')
+    
+    req_data = request.get_json(silent=True) or {}
+    filename = req_data.get('filename')
+    
+    if not filename:
+        filename = 'MBA BA 2026-28 Term I Schedule .xlsx'
+        
+    filename = os.path.basename(filename) # Prevent directory traversal
+    excel_path = os.path.join(os.path.dirname(__file__), filename)
+    
     if not os.path.exists(excel_path):
         return jsonify({'error': 'Excel file not found'}), 404
     try:

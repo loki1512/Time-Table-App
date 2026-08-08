@@ -66,6 +66,7 @@ function showAdminView(name) {
   if (name === 'courses') loadAdminCourses();
   if (name === 'users') loadAdminUsers();
   if (name === 'slots') loadAdminSlots();
+  if (name === 'import') loadExcelFiles();
 }
 
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -395,14 +396,41 @@ async function toggleAdmin(id, makeAdmin) {
 }
 
 // ─── IMPORT EXCEL ─────────────────────────────────────────────────────────────
+async function loadExcelFiles() {
+  const select = el('excelFileSelect');
+  if (!select) return;
+  select.innerHTML = '<option value="">Loading files...</option>';
+  try {
+    const files = await api('/api/admin/excel-files');
+    if (files.length === 0) {
+      select.innerHTML = '<option value="">No Excel files found</option>';
+    } else {
+      select.innerHTML = files.map(f => `<option value="${escHtml(f)}">${escHtml(f)}</option>`).join('');
+    }
+  } catch (err) {
+    select.innerHTML = `<option value="">Error loading files: ${err.message}</option>`;
+  }
+}
+
 async function importExcel() {
   const btn = el('importExcelBtn');
+  const select = el('excelFileSelect');
+  const filename = select ? select.value : '';
+  
+  if (!filename) {
+    showToast('Please select an Excel file', 'error');
+    return;
+  }
+  
   btn.disabled = true;
   btn.textContent = 'Importing...';
   const result = el('importResult');
   result.style.display = 'none';
   try {
-    const data = await api('/api/admin/import-excel', { method: 'POST' });
+    const data = await api('/api/admin/import-excel', { 
+      method: 'POST',
+      body: JSON.stringify({ filename })
+    });
     result.className = 'import-result success';
     result.textContent = '✅ ' + (data.message || 'Import successful!');
     result.style.display = 'block';
