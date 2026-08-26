@@ -434,24 +434,17 @@ async function loadExcelFiles() {
 }
 
 async function syncGoogleSheet() {
-  const input = el('googleSyncUrlInput');
   const btn = el('googleSyncBtn');
   const result = el('googleSyncResult');
-  const url = input ? input.value.trim() : '';
-
-  if (url) {
-    // Cache in localStorage
-    localStorage.setItem('iim_google_sync_url', url);
-  }
 
   btn.disabled = true;
-  btn.textContent = 'Syncing from Google...';
+  btn.textContent = 'Syncing with Google...';
   result.style.display = 'none';
 
   try {
     const data = await api('/api/admin/sync-google-sheet', {
       method: 'POST',
-      body: JSON.stringify({ url })
+      body: JSON.stringify({})
     });
     result.className = 'import-result success';
     result.textContent = '[OK] ' + (data.message || 'Timetable synced successfully!');
