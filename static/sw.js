@@ -1,25 +1,26 @@
 /* ─── IIM Sambalpur Timetable – Service Worker ───────────────────────────── */
 
-const CACHE_NAME = 'iim-timetable-v2';
+const CACHE_NAME = 'iim-timetable-v3';
 const STATIC_ASSETS = [
   '/',
   '/static/css/style.css',
+  '/static/css/admin.css',
   '/static/js/app.js',
+  '/static/js/admin.js',
   '/static/icons/icon-192.png',
   '/static/icons/icon-512.png',
 ];
 
 // ─── INSTALL ──────────────────────────────────────────────────────────────────
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      console.log('[SW] Caching static assets');
       return cache.addAll(STATIC_ASSETS.map(url => new Request(url, { credentials: 'include' })));
     }).catch(err => {
       console.warn('[SW] Install cache error (non-fatal):', err);
     })
   );
-  self.skipWaiting();
 });
 
 // ─── ACTIVATE ─────────────────────────────────────────────────────────────────
@@ -36,12 +37,12 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Skip cross-origin requests (prevents breaking external links in PWAs)
+  // Skip cross-origin requests
   if (url.origin !== self.location.origin) {
     return;
   }
 
-  // Always fetch API calls from network
+  // Always fetch API calls from network directly
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/login') || url.pathname.startsWith('/logout')) {
     event.respondWith(
       fetch(event.request).catch(() => new Response(JSON.stringify({ error: 'Offline' }), {
@@ -52,35 +53,21 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Cache-first for static assets, network-first for pages
-  if (event.request.destination === 'document') {
-    // Network-first for HTML pages
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request).then(r => r || caches.match('/')))
-    );
-  } else {
-    // Cache-first for CSS, JS, images
-    event.respondWith(
-      caches.match(event.request).then(cached => {
-        if (cached) return cached;
-        return fetch(event.request).then(response => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          }
-          return response;
-        });
+  // Network-First for everything (HTML, JS, CSS) so updates appear instantly without hard-refresh
+  event.respondWith(
+    fetch(event.request)
+      .then(response => {
+        if (response && response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
       })
-    );
-  }
+      .catch(() => {
+        // Fallback to cache when offline
+        return caches.match(event.request).then(cached => cached || caches.match('/'));
+      })
+  );
 });
 
 // ─── PUSH NOTIFICATIONS ───────────────────────────────────────────────────────

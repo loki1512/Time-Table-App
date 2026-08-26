@@ -41,6 +41,7 @@ class Config:
 
     SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SEND_FILE_MAX_AGE_DEFAULT = 0  # Disable static file HTTP caching so updates load immediately
 
     # ── Engine options ─────────────────────────────────────────────────────────
     # SSL and pool settings only apply to PostgreSQL (Supabase).
