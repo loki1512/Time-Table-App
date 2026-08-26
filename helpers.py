@@ -189,9 +189,12 @@ def sync_from_google_sheet(sync_url=None):
     from urllib.request import urlopen, Request
     from config import Config
 
-    url = (sync_url or '').strip() or os.environ.get('GOOGLE_SHEET_SYNC_URL', '').strip() or Config.GOOGLE_SHEET_SYNC_URL
-    if not url:
+    raw_url = (sync_url or '').strip() or os.environ.get('GOOGLE_SHEET_SYNC_URL', '').strip() or Config.GOOGLE_SHEET_SYNC_URL
+    if not raw_url:
         return False, "Google Sheet Sync URL is not configured. Set GOOGLE_SHEET_SYNC_URL in env or enter the URL in Admin."
+
+    # Sanitize URL: remove any accidental newlines, carriage returns, or spaces from copy-paste
+    url = raw_url.replace('\n', '').replace('\r', '').replace(' ', '').strip()
 
     try:
         req = Request(
