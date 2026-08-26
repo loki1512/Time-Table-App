@@ -1,0 +1,43 @@
+# ─── Secrets & local config ───────────────────────────────────────────────────
+.env
+# .env.example is intentionally NOT ignored (safe template, no real secrets)
+
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# ─── Virtual environments ─────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+myenv/
+
+# ─── SQLite (local DB only, not for production) ───────────────────────────────
+instance/
+*.db
+*.sqlite3
+
+# ─── Flask / migrations ───────────────────────────────────────────────────────
+# Keep the migrations/ folder if you use Flask-Migrate
+# instance/ is ignored above (holds timetable.db)
+
+# ─── OS files ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── IDE / editor ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
