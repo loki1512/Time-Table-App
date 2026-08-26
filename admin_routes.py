@@ -325,7 +325,11 @@ def admin_notification_subscribers_count():
     err = _require_admin()
     if err:
         return err
-    count = Notification.query.filter(Notification.push_subscription.isnot(None)).count()
+    count = Notification.query.filter(
+        Notification.push_subscription.isnot(None),
+        Notification.push_subscription != 'null',
+        Notification.push_subscription != ''
+    ).count()
     return jsonify({'count': count})
 
 

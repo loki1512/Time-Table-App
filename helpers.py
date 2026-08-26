@@ -273,8 +273,12 @@ def broadcast_push_notification(title, body, url='/', tag='announcement'):
     if not Config.VAPID_PUBLIC_KEY or not Config.VAPID_PRIVATE_KEY:
         return {'total': 0, 'sent': 0, 'failed': 0, 'error': 'VAPID keys not configured.'}
 
-    # Query all active subscriptions in existing DB without any schema changes
-    subscriptions = Notification.query.filter(Notification.push_subscription.isnot(None)).all()
+    # Query all active subscriptions in existing DB (filter out 'null' strings and empties)
+    subscriptions = Notification.query.filter(
+        Notification.push_subscription.isnot(None),
+        Notification.push_subscription != 'null',
+        Notification.push_subscription != ''
+    ).all()
     if not subscriptions:
         return {'total': 0, 'sent': 0, 'failed': 0, 'message': 'No users have enabled push notifications yet.'}
 
@@ -292,7 +296,7 @@ def broadcast_push_notification(title, body, url='/', tag='announcement'):
 
     for notif in subscriptions:
         try:
-            if not notif.push_subscription:
+            if not notif.push_subscription or notif.push_subscription == 'null':
                 continue
             sub_info = json.loads(notif.push_subscription)
             if not isinstance(sub_info, dict) or not sub_info.get('endpoint'):
@@ -308,8 +312,9 @@ def broadcast_push_notification(title, body, url='/', tag='announcement'):
             sent += 1
         except WebPushException as ex:
             failed += 1
-            # If subscription expired/unregistered on client (404/410), clear it safely
-            if hasattr(ex, 'response') and ex.response is not None and ex.response.status_code in [404, 410]:
+            # If subscription expired/unregistered or has invalid VAPID token (400, 401, 404, 410), clear it
+            status_code = getattr(ex.response, 'status_code', None) if hasattr(ex, 'response') else None
+            if status_code in [400, 401, 404, 410]:
                 try:
                     notif.push_subscription = None
                     db.session.commit()

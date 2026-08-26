@@ -526,15 +526,21 @@ async function getBrowserPushSubscription() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
   try {
     const reg = await navigator.serviceWorker.ready;
+    const { publicKey } = await api('/api/notifications/vapid-public-key');
+    if (!publicKey) return null;
+
     let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      const { publicKey } = await api('/api/notifications/vapid-public-key');
-      if (!publicKey) return null;
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey)
-      });
+    // If an existing subscription exists, renew it with the current VAPID key
+    if (sub) {
+      try {
+        await sub.unsubscribe();
+      } catch (e) {}
     }
+
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey)
+    });
     return sub ? sub.toJSON() : null;
   } catch (err) {
     console.warn('[Push] Subscription failed:', err);
