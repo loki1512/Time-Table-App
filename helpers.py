@@ -65,9 +65,14 @@ def parse_subject_abbr(text):
     return text.split()[0] if text else None
 
 
-def import_excel(filepath):
-    """Parse Excel timetable and populate the DB."""
-    wb = openpyxl.load_workbook(filepath)
+def import_excel(source):
+    """Parse Excel timetable and populate the DB.
+
+    Args:
+        source: A file path string OR a file-like object (e.g. io.BytesIO from
+                an uploaded file).  openpyxl accepts both transparently.
+    """
+    wb = openpyxl.load_workbook(source)
     ws = wb.active
 
     course_color_idx = 0

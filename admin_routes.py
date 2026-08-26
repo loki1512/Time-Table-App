@@ -5,6 +5,7 @@ Admin Blueprint: all write/mutation API endpoints.
 Every route here enforces current_user.is_admin.
 """
 
+import io
 import os
 from datetime import datetime
 
@@ -251,6 +252,32 @@ def admin_import_excel():
     try:
         import_excel(excel_path)
         return jsonify({'success': True, 'message': 'Excel imported successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/admin/upload-excel', methods=['POST'])
+@login_required
+def admin_upload_excel():
+    """Accept a multipart .xlsx upload, parse it in memory — never saved to disk."""
+    err = _require_admin()
+    if err:
+        return err
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in request'}), 400
+
+    uploaded = request.files['file']
+    if uploaded.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    if not uploaded.filename.lower().endswith('.xlsx'):
+        return jsonify({'error': 'Only .xlsx files are supported'}), 400
+
+    try:
+        # Read the upload into memory — no temp file written to disk
+        stream = io.BytesIO(uploaded.read())
+        import_excel(stream)
+        return jsonify({'success': True, 'message': f'"{uploaded.filename}" imported successfully'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

@@ -432,17 +432,100 @@ async function importExcel() {
       body: JSON.stringify({ filename })
     });
     result.className = 'import-result success';
-    result.textContent = '✅ ' + (data.message || 'Import successful!');
+    result.textContent = '[OK] ' + (data.message || 'Import successful!');
     result.style.display = 'block';
     showToast('Excel imported successfully!', 'success');
   } catch (err) {
     result.className = 'import-result error';
-    result.textContent = '❌ Error: ' + err.message;
+    result.textContent = '[Error] ' + err.message;
     result.style.display = 'block';
     showToast(err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import Excel Now';
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Import Server File';
+  }
+}
+
+// ─── LOCAL FILE UPLOAD ────────────────────────────────────────────────────────
+
+let _selectedFile = null;
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  _applySelectedFile(file);
+}
+
+function handleDragOver(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  el('dropZone').classList.add('drag-over');
+}
+
+function handleDragLeave(event) {
+  event.preventDefault();
+  el('dropZone').classList.remove('drag-over');
+}
+
+function handleDrop(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  el('dropZone').classList.remove('drag-over');
+  const file = event.dataTransfer.files[0];
+  if (file) _applySelectedFile(file);
+}
+
+function _applySelectedFile(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.xlsx')) {
+    showToast('Only .xlsx files are supported', 'error');
+    return;
+  }
+  _selectedFile = file;
+  const zone = el('dropZone');
+  zone.classList.add('has-file');
+  el('dropZoneText').innerHTML = `<strong>${escHtml(file.name)}</strong><br><span>${(file.size / 1024).toFixed(1)} KB — click to change</span>`;
+  el('uploadExcelBtn').disabled = false;
+}
+
+async function uploadExcel() {
+  if (!_selectedFile) { showToast('Please select a file first', 'error'); return; }
+
+  const btn = el('uploadExcelBtn');
+  const result = el('uploadResult');
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+  result.style.display = 'none';
+
+  try {
+    const formData = new FormData();
+    formData.append('file', _selectedFile);
+
+    const resp = await fetch('/api/admin/upload-excel', {
+      method: 'POST',
+      body: formData   // multipart — do NOT set Content-Type manually
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Upload failed');
+
+    result.className = 'import-result success';
+    result.textContent = '[OK] ' + (data.message || 'Import successful!');
+    result.style.display = 'block';
+    showToast(data.message || 'Imported successfully!', 'success');
+
+    // Reset drop zone
+    _selectedFile = null;
+    el('excelUploadInput').value = '';
+    el('dropZone').classList.remove('has-file');
+    el('dropZoneText').innerHTML = 'Drag &amp; drop an <strong>.xlsx</strong> file here<br><span>or click to browse</span>';
+    btn.disabled = true;
+  } catch (err) {
+    result.className = 'import-result error';
+    result.textContent = '[Error] ' + err.message;
+    result.style.display = 'block';
+    showToast(err.message, 'error');
+  } finally {
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload &amp; Import';
+    if (_selectedFile) btn.disabled = false;
   }
 }
 
