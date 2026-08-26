@@ -21,9 +21,13 @@ const SLOT_TIMES = {
   4: { start: '16:00', end: '17:30', label: '04:00 PM' },
 };
 
-// ─── UTILITY ─────────────────────────────────────────────────────────────────
 function fmt(d) {
-  return d.toISOString().split('T')[0];
+  if (!d) return '';
+  if (typeof d === 'string') return d.split('T')[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function addDays(d, n) {

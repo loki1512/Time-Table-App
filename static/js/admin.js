@@ -9,6 +9,15 @@ function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function fmt(d) {
+  if (!d) return '';
+  if (typeof d === 'string') return d.split('T')[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function showToast(msg, type = 'info') {
   const c = el('toastContainer');
   const t = document.createElement('div');
@@ -133,7 +142,7 @@ function renderAdminSessions(sessions) {
 }
 
 function resetDateFilter() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = fmt(new Date());
   el('filterStart').value = today;
   el('filterEnd').value = today;
   loadAdminSessions();
@@ -147,7 +156,7 @@ async function openAddSessionModal() {
   editingSessionId = null;
   el('sessionModalTitle').textContent = 'Add Session';
   el('sessionId').value = '';
-  el('sessionDate').value = new Date().toISOString().split('T')[0];
+  el('sessionDate').value = fmt(new Date());
   el('sessionSubject').value = '';
   el('sessionNotes').value = '';
   el('sessionSpecial').checked = false;
@@ -704,8 +713,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const weekEnd = new Date(week);
   weekEnd.setDate(week.getDate() + 6);
 
-  el('filterStart').value = week.toISOString().split('T')[0];
-  el('filterEnd').value = weekEnd.toISOString().split('T')[0];
+  el('filterStart').value = fmt(week);
+  el('filterEnd').value = fmt(weekEnd);
 
   showAdminView('sessions');
   buildColorPresets();

@@ -1,6 +1,6 @@
 /* ─── IIM Sambalpur Timetable – Service Worker ───────────────────────────── */
 
-const CACHE_NAME = 'iim-timetable-v3';
+const CACHE_NAME = 'iim-timetable-v4';
 const STATIC_ASSETS = [
   '/',
   '/static/css/style.css',
