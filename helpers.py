@@ -185,10 +185,11 @@ def sync_from_google_sheet(sync_url=None):
     """Fetch timetable from Google Apps Script Web App proxy or direct export link."""
     import base64
     import io
+    import os
     from urllib.request import urlopen, Request
     from config import Config
 
-    url = sync_url or Config.GOOGLE_SHEET_SYNC_URL
+    url = (sync_url or '').strip() or os.environ.get('GOOGLE_SHEET_SYNC_URL', '').strip() or Config.GOOGLE_SHEET_SYNC_URL
     if not url:
         return False, "Google Sheet Sync URL is not configured. Set GOOGLE_SHEET_SYNC_URL in env or enter the URL in Admin."
 

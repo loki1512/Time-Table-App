@@ -305,14 +305,16 @@ def admin_sync_google_sheet():
 @admin_bp.route('/api/admin/sync-status', methods=['GET'])
 @login_required
 def admin_sync_status():
-    """Return whether server has a default GOOGLE_SHEET_SYNC_URL configured."""
+    """Return whether server has a default GOOGLE_SHEET_SYNC_URL configured and its value."""
+    import os
     from config import Config
     err = _require_admin()
     if err:
         return err
+    env_url = os.environ.get('GOOGLE_SHEET_SYNC_URL', '').strip() or Config.GOOGLE_SHEET_SYNC_URL
     return jsonify({
-        'configured': bool(Config.GOOGLE_SHEET_SYNC_URL),
-        'has_env_url': bool(Config.GOOGLE_SHEET_SYNC_URL)
+        'configured': bool(env_url),
+        'url': env_url
     })
 
 

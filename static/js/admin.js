@@ -416,12 +416,16 @@ async function loadExcelFiles() {
   try {
     const status = await api('/api/admin/sync-status');
     const indicator = el('syncStatusIndicator');
-    if (status.configured && indicator) {
-      indicator.style.display = 'block';
+    const syncInput = el('googleSyncUrlInput');
+    if (status.configured) {
+      if (indicator) indicator.style.display = 'block';
+      if (syncInput && status.url) {
+        syncInput.value = status.url;
+      }
     }
   } catch (e) {}
 
-  // Restore saved Google Apps Script Sync URL from localStorage if input is empty
+  // Fallback: Restore saved Google Apps Script Sync URL from localStorage if input is still empty
   const savedSyncUrl = localStorage.getItem('iim_google_sync_url');
   const syncInput = el('googleSyncUrlInput');
   if (syncInput && savedSyncUrl && !syncInput.value) {
