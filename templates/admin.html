@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0f0f1a" />
-  <title>Admin Panel – IIM Sambalpur Timetable</title>
+  <title>Admin Panel â€“ IIM Sambalpur Timetable</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -22,7 +22,7 @@
               <rect width="32" height="32" rx="8" fill="url(#sideGrad2)"/>
               <path d="M8 22l4-12h8l4 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M10 18h12" stroke="white" stroke-width="2" stroke-linecap="round"/>
-              <defs><linearGradient id="sideGrad2" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs>
+              <defs><linearGradient id="sideGrad2" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#2952CC"/><stop offset="1" stop-color="#C9A227"/></linearGradient></defs>
             </svg>
           </div>
           <div class="sidebar-brand">
@@ -266,9 +266,9 @@
         <div class="form-group">
           <label class="form-label">Course</label>
           <select id="sessionCourse" class="form-input">
-            <option value="">— No course / Special —</option>
+            <option value="">â€” No course / Special â€”</option>
             {% for c in courses %}
-            <option value="{{ c.id }}">{{ c.short_name }} – {{ c.name }}</option>
+            <option value="{{ c.id }}">{{ c.short_name }} â€“ {{ c.name }}</option>
             {% endfor %}
           </select>
         </div>
@@ -367,7 +367,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">Display Label</label>
-          <input type="text" id="slotLabel" class="form-input" placeholder="e.g. 09:30 AM – 11:00 AM" />
+          <input type="text" id="slotLabel" class="form-input" placeholder="e.g. 09:30 AM â€“ 11:00 AM" />
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -393,3 +393,4 @@
   <script src="/static/js/admin.js"></script>
 </body>
 </html>
+

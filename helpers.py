@@ -22,8 +22,14 @@ DEFAULT_SLOTS = [
 ]
 
 COURSE_COLORS = [
-    '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b',
-    '#10b981', '#3b82f6', '#ef4444', '#14b8a6',
+    '#2952CC',  # IIM Royal Blue
+    '#C9A227',  # IIM Gold
+    '#1565C0',  # Deep Blue
+    '#0891B2',  # Teal
+    '#10b981',  # Emerald
+    '#4F78E8',  # Light IIM Blue
+    '#D97706',  # Amber-Gold
+    '#0E7490',  # Dark Teal
 ]
 
 COURSE_ABBR_MAP = {

@@ -1,21 +1,29 @@
-/* ─── RESET & BASE ─────────────────────────────────────────────────────────── */
+﻿/* â”€â”€â”€ RESET & BASE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* â”€â”€â”€ IIM SAMBALPUR THEME â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   Primary  : Royal Navy Blue  #2952CC  (IIM brand blue, brightened for dark bg)
+   Secondary: IIM Gold         #C9A227
+   Backgrounds: deep navy family
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 :root {
-  --bg:          #0f0f1a;
-  --bg-2:        #161625;
-  --bg-3:        #1e1e30;
-  --bg-4:        #252540;
-  --surface:     #1a1a2e;
-  --surface-2:   #20203a;
+  --bg:          #050D1A;
+  --bg-2:        #0A1628;
+  --bg-3:        #0F2040;
+  --bg-4:        #162850;
+  --surface:     #0D1B38;
+  --surface-2:   #122045;
   --border:      rgba(255,255,255,0.08);
-  --border-2:    rgba(255,255,255,0.12);
-  --text:        #f1f1f8;
-  --text-2:      #9898b8;
-  --text-3:      #5a5a80;
-  --accent:      #6366f1;
-  --accent-2:    #818cf8;
-  --accent-3:    #a855f7;
+  --border-2:    rgba(255,255,255,0.13);
+  --text:        #EEF2FF;
+  --text-2:      #8BA3CC;
+  --text-3:      #4A6080;
+
+  /* IIM Blue â€” primary accent */
+  --accent:      #2952CC;
+  --accent-2:    #4F78E8;
+  --accent-3:    #C9A227;   /* IIM Gold as tertiary accent */
+
   --success:     #10b981;
   --warning:     #f59e0b;
   --danger:      #ef4444;
@@ -23,14 +31,15 @@
   --radius:      14px;
   --radius-sm:   8px;
   --radius-lg:   20px;
-  --shadow:      0 4px 24px rgba(0,0,0,0.4);
-  --shadow-lg:   0 8px 48px rgba(0,0,0,0.6);
+  --shadow:      0 4px 24px rgba(0,0,0,0.5);
+  --shadow-lg:   0 8px 48px rgba(0,0,0,0.7);
   --transition:  0.2s ease;
   --sidebar-w:   260px;
   --topbar-h:    64px;
   --bnav-h:      68px;
   --font:        'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
+
 
 html { font-size: 16px; -webkit-tap-highlight-color: transparent; }
 
@@ -47,13 +56,13 @@ a { color: inherit; text-decoration: none; }
 button { font-family: var(--font); cursor: pointer; border: none; background: none; }
 input, select, textarea { font-family: var(--font); }
 
-/* ─── APP SHELL ─────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ APP SHELL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .app-shell {
   display: flex;
   min-height: 100vh;
 }
 
-/* ─── SIDEBAR ────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ SIDEBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sidebar {
   width: var(--sidebar-w);
   background: var(--bg-2);
@@ -142,9 +151,9 @@ input, select, textarea { font-family: var(--font); }
 }
 .nav-item:hover { background: var(--bg-3); color: var(--text); }
 .nav-item.active {
-  background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.15));
+  background: linear-gradient(135deg, rgba(41,82,204,0.25), rgba(201,162,39,0.15));
   color: var(--accent-2);
-  border: 1px solid rgba(99,102,241,0.2);
+  border: 1px solid rgba(41,82,204,0.25);
 }
 
 .admin-link {
@@ -196,7 +205,7 @@ input, select, textarea { font-family: var(--font); }
 }
 .logout-btn:hover { background: rgba(239,68,68,0.15); color: var(--danger); }
 
-/* ─── MAIN CONTENT ────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ MAIN CONTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .main-content {
   flex: 1;
   display: flex;
@@ -205,7 +214,7 @@ input, select, textarea { font-family: var(--font); }
   overflow-x: hidden;
 }
 
-/* ─── TOPBAR ────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ TOPBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .topbar {
   height: var(--topbar-h);
   display: flex;
@@ -265,7 +274,7 @@ input, select, textarea { font-family: var(--font); }
 }
 .admin-pill:hover { background: rgba(245,158,11,0.2); }
 
-/* ─── VIEW CONTAINER ─────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ VIEW CONTAINER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .view-container {
   flex: 1;
   overflow-y: auto;
@@ -279,10 +288,10 @@ input, select, textarea { font-family: var(--font); }
 .view { display: none; padding: 20px; }
 .view.active { display: block; }
 
-/* ─── TODAY VIEW ─────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ TODAY VIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .today-hero {
-  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.1));
-  border: 1px solid rgba(99,102,241,0.2);
+  background: linear-gradient(135deg, rgba(41,82,204,0.18), rgba(201,162,39,0.10));
+  border: 1px solid rgba(41,82,204,0.25);
   border-radius: var(--radius-lg);
   padding: 24px;
   margin-bottom: 16px;
@@ -307,8 +316,8 @@ input, select, textarea { font-family: var(--font); }
 }
 
 .stat-pill {
-  background: rgba(99,102,241,0.2);
-  border: 1px solid rgba(99,102,241,0.3);
+  background: rgba(41,82,204,0.25);
+  border: 1px solid rgba(41,82,204,0.35);
   border-radius: 50px;
   padding: 8px 16px;
   display: flex;
@@ -366,7 +375,7 @@ input, select, textarea { font-family: var(--font); }
   box-shadow: var(--shadow);
   border-color: var(--border-2);
 }
-.session-card.upcoming { border-color: rgba(99,102,241,0.3); }
+.session-card.upcoming { border-color: rgba(41,82,204,0.35); }
 .session-card.current { 
   border-color: rgba(16,185,129,0.4);
   background: rgba(16,185,129,0.05);
@@ -431,9 +440,9 @@ input, select, textarea { font-family: var(--font); }
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 20px;
-  background: rgba(99,102,241,0.15);
+  background: rgba(41,82,204,0.18);
   color: var(--accent-2);
-  border: 1px solid rgba(99,102,241,0.2);
+  border: 1px solid rgba(41,82,204,0.25);
 }
 
 .session-badge.special-badge {
@@ -456,7 +465,7 @@ input, select, textarea { font-family: var(--font); }
   letter-spacing: 0.05em;
 }
 .status-now { background: rgba(16,185,129,0.2); color: var(--success); }
-.status-next { background: rgba(99,102,241,0.2); color: var(--accent-2); }
+.status-next { background: rgba(41,82,204,0.25); color: var(--accent-2); }
 
 /* Empty state */
 .empty-state {
@@ -472,7 +481,7 @@ input, select, textarea { font-family: var(--font); }
 .empty-title { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
 .empty-desc { font-size: 14px; }
 
-/* ─── WEEK VIEW ──────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ WEEK VIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .week-nav {
   display: flex;
   align-items: center;
@@ -584,7 +593,7 @@ input, select, textarea { font-family: var(--font); }
   color: var(--text-3);
 }
 
-/* ─── CALENDAR VIEW ──────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ CALENDAR VIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .calendar-header {
   display: flex;
   align-items: center;
@@ -642,7 +651,7 @@ input, select, textarea { font-family: var(--font); }
 .cal-day:nth-child(7n) { border-right: none; }
 .cal-day:hover { background: var(--bg-3); }
 .cal-day.empty { background: rgba(0,0,0,0.2); cursor: default; }
-.cal-day.today { background: rgba(99,102,241,0.08); }
+.cal-day.today { background: rgba(41,82,204,0.10); }
 .cal-day.has-class { }
 
 .cal-day-num {
@@ -711,7 +720,7 @@ input, select, textarea { font-family: var(--font); }
   gap: 8px;
 }
 
-/* ─── COURSES VIEW ────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ COURSES VIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .courses-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -783,7 +792,7 @@ a.course-card-link {
 }
 a.course-card-link:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 30px rgba(99,102,241,0.2);
+  box-shadow: 0 8px 30px rgba(41,82,204,0.25);
   border-color: var(--course-color, var(--accent));
 }
 .course-link-hint {
@@ -801,7 +810,7 @@ a.course-card-link:hover .course-link-hint {
   opacity: 1;
 }
 
-/* ─── NOTIFICATIONS VIEW ──────────────────────────────────────────────────────── */
+/* â”€â”€â”€ NOTIFICATIONS VIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .notif-container {
   max-width: 480px;
   margin: 0 auto;
@@ -818,8 +827,8 @@ a.course-card-link:hover .course-link-hint {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.15));
-  border: 1px solid rgba(99,102,241,0.3);
+  background: linear-gradient(135deg, rgba(41,82,204,0.25), rgba(201,162,39,0.15));
+  border: 1px solid rgba(41,82,204,0.35);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -935,7 +944,7 @@ a.course-card-link:hover .course-link-hint {
   color: var(--text-2);
 }
 
-/* ─── BOTTOM NAV ──────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ BOTTOM NAV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .bottom-nav {
   position: fixed;
   bottom: 0; left: 0; right: 0;
@@ -966,7 +975,7 @@ a.course-card-link:hover .course-link-hint {
 .bnav-item:hover, .bnav-item.active { color: var(--accent-2); }
 .bnav-item.active svg { color: var(--accent-2); }
 
-/* ─── BUTTONS ─────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ BUTTONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .btn-primary {
   display: inline-flex;
   align-items: center;
@@ -1007,7 +1016,7 @@ a.course-card-link:hover .course-link-hint {
 .btn-full { width: 100%; }
 .btn-lg { padding: 14px 24px; font-size: 16px; border-radius: var(--radius); }
 
-/* ─── FORMS ───────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ FORMS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .form-group { margin-bottom: 16px; }
 .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
 
@@ -1024,7 +1033,7 @@ a.course-card-link:hover .course-link-hint {
 }
 .form-input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+  box-shadow: 0 0 0 3px rgba(41,82,204,0.18);
 }
 
 .input-wrap { position: relative; }
@@ -1050,7 +1059,7 @@ a.course-card-link:hover .course-link-hint {
 }
 .toggle-pw:hover { color: var(--text); }
 
-/* ─── AUTH PAGE ───────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ AUTH PAGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -1154,7 +1163,7 @@ a.course-card-link:hover .course-link-hint {
 .flash-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #fca5a5; }
 .flash-success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #6ee7b7; }
 
-/* ─── LOADING SKELETON ────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ LOADING SKELETON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .loading-skeleton { display: flex; flex-direction: column; gap: 12px; }
 .skeleton-card {
   height: 80px;
@@ -1165,7 +1174,7 @@ a.course-card-link:hover .course-link-hint {
 }
 @keyframes skeleton { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-/* ─── TOAST ──────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ TOAST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .toast-container {
   position: fixed;
   bottom: calc(var(--bnav-h) + 12px);
@@ -1209,21 +1218,22 @@ a.course-card-link:hover .course-link-hint {
 
 @keyframes toast-in { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
-/* ─── SPINNER ────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ SPINNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .spin {
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ─── SCROLLBAR ──────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ SCROLLBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
 
-/* ─── RESPONSIVE ─────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ RESPONSIVE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 480px) {
   .auth-card { padding: 24px 20px; }
   .today-hero { flex-direction: column; align-items: flex-start; gap: 16px; }
   .courses-grid { grid-template-columns: 1fr; }
 }
+

@@ -1,7 +1,7 @@
-/* ─── IIM Sambalpur – Admin Panel JS ─────────────────────────────────────── */
+﻿/* â”€â”€â”€ IIM Sambalpur â€“ Admin Panel JS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 'use strict';
 
-const COLORS = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#14b8a6'];
+const COLORS = ['#2952CC','#4F78E8','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#14b8a6'];
 
 function el(id) { return document.getElementById(id); }
 
@@ -33,7 +33,7 @@ async function api(url, opts = {}) {
 function openSidebar() { el('sidebar').classList.add('open'); el('sidebarOverlay').classList.add('show'); }
 function closeSidebar() { el('sidebar').classList.remove('open'); el('sidebarOverlay').classList.remove('show'); }
 
-// ─── ADMIN VIEW SWITCHING ─────────────────────────────────────────────────────
+// â”€â”€â”€ ADMIN VIEW SWITCHING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const adminViews = { sessions: 'Sessions', courses: 'Courses', users: 'Users', import: 'Import Excel', slots: 'Time Slots' };
 
 function showAdminView(name) {
@@ -72,7 +72,7 @@ function showAdminView(name) {
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 function openAddModal() { /* overridden per view */ }
 
-// ─── SESSIONS ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ SESSIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function loadAdminSessions() {
   if (!slotsCache || slotsCache.length === 0) {
     try { slotsCache = await api('/api/slots'); } catch(e) {}
@@ -116,8 +116,8 @@ function renderAdminSessions(sessions) {
           <div style="font-size:10px;color:var(--text-3)">Slot ${s.slot}</div>
         </div>
         <div class="asi-content">
-          <div class="asi-subject">${escHtml(s.subject_raw || '–')}</div>
-          <div class="asi-course">${s.course ? escHtml(`${s.course.short_name} – ${s.course.name}`) : 'No course linked'}</div>
+          <div class="asi-subject">${escHtml(s.subject_raw || 'â€“')}</div>
+          <div class="asi-course">${s.course ? escHtml(`${s.course.short_name} â€“ ${s.course.name}`) : 'No course linked'}</div>
         </div>
         ${s.is_special ? '<span class="asi-special-tag">Special</span>' : ''}
         <div class="asi-actions">
@@ -180,8 +180,8 @@ async function loadCoursesIntoSelect() {
     coursesCache = await api('/api/courses');
     const sel = el('sessionCourse');
     const cur = sel.value;
-    sel.innerHTML = '<option value="">— No course / Special —</option>' +
-      coursesCache.map(c => `<option value="${c.id}">${escHtml(c.short_name)} – ${escHtml(c.name)}</option>`).join('');
+    sel.innerHTML = '<option value="">â€” No course / Special â€”</option>' +
+      coursesCache.map(c => `<option value="${c.id}">${escHtml(c.short_name)} â€“ ${escHtml(c.name)}</option>`).join('');
     sel.value = cur;
   } catch (e) {}
 }
@@ -235,7 +235,7 @@ async function deleteSession(id) {
   }
 }
 
-// ─── COURSES ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ COURSES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function loadAdminCourses() {
   try {
     const courses = await api('/api/courses');
@@ -253,9 +253,9 @@ async function loadAdminCourses() {
             <span class="acc-tag">${c.credits} credits</span>
             ${c.area ? `<span class="acc-tag">${escHtml(c.area)}</span>` : ''}
             <span class="acc-tag">${escHtml(c.code)}</span>
-            ${c.course_link ? `<a class="acc-tag acc-link-tag" href="${escHtml(c.course_link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🔗 Course Page</a>` : ''}
+            ${c.course_link ? `<a class="acc-tag acc-link-tag" href="${escHtml(c.course_link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">ðŸ”— Course Page</a>` : ''}
           </div>
-          <div class="acc-faculty">${c.faculty ? escHtml(c.faculty) : '—'}</div>
+          <div class="acc-faculty">${c.faculty ? escHtml(c.faculty) : 'â€”'}</div>
           <div class="acc-actions">
             <button class="acc-edit-btn" onclick="openEditCourseModal(${JSON.stringify(c).replace(/"/g,'&quot;')})">Edit</button>
             <button class="acc-del-btn" onclick="deleteCourse(${c.id})">Delete</button>
@@ -280,7 +280,7 @@ function openAddCourseModal() {
   el('courseArea').value = '';
   el('courseFaculty').value = '';
   el('courseLinkUrl').value = '';
-  el('courseColor').value = '#6366f1';
+  el('courseColor').value = '#2952CC';
   buildColorPresets();
   el('courseModalOverlay').classList.add('show');
 }
@@ -296,7 +296,7 @@ function openEditCourseModal(c) {
   el('courseArea').value = c.area || '';
   el('courseFaculty').value = c.faculty || '';
   el('courseLinkUrl').value = c.course_link || '';
-  el('courseColor').value = c.color || '#6366f1';
+  el('courseColor').value = c.color || '#2952CC';
   buildColorPresets(c.color);
   el('courseModalOverlay').classList.add('show');
 }
@@ -359,7 +359,7 @@ async function deleteCourse(id) {
   }
 }
 
-// ─── USERS ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ USERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function loadAdminUsers() {
   try {
     const users = await api('/api/admin/users');
@@ -395,7 +395,7 @@ async function toggleAdmin(id, makeAdmin) {
   }
 }
 
-// ─── IMPORT EXCEL ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ IMPORT EXCEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function loadExcelFiles() {
   const select = el('excelFileSelect');
   if (!select) return;
@@ -446,7 +446,7 @@ async function importExcel() {
   }
 }
 
-// ─── LOCAL FILE UPLOAD ────────────────────────────────────────────────────────
+// â”€â”€â”€ LOCAL FILE UPLOAD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 let _selectedFile = null;
 
@@ -483,7 +483,7 @@ function _applySelectedFile(file) {
   _selectedFile = file;
   const zone = el('dropZone');
   zone.classList.add('has-file');
-  el('dropZoneText').innerHTML = `<strong>${escHtml(file.name)}</strong><br><span>${(file.size / 1024).toFixed(1)} KB — click to change</span>`;
+  el('dropZoneText').innerHTML = `<strong>${escHtml(file.name)}</strong><br><span>${(file.size / 1024).toFixed(1)} KB â€” click to change</span>`;
   el('uploadExcelBtn').disabled = false;
 }
 
@@ -502,7 +502,7 @@ async function uploadExcel() {
 
     const resp = await fetch('/api/admin/upload-excel', {
       method: 'POST',
-      body: formData   // multipart — do NOT set Content-Type manually
+      body: formData   // multipart â€” do NOT set Content-Type manually
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Upload failed');
@@ -529,7 +529,7 @@ async function uploadExcel() {
   }
 }
 
-// ─── TIME SLOTS ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ TIME SLOTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let slotsCache = [];
 let editingSlotId = null;
 
@@ -646,7 +646,7 @@ async function deleteSlot(id) {
   }
 }
 
-// ─── INIT ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.addEventListener('DOMContentLoaded', () => {
   // Set default date filter to this week
   const today = new Date();
@@ -661,3 +661,4 @@ document.addEventListener('DOMContentLoaded', () => {
   showAdminView('sessions');
   buildColorPresets();
 });
+

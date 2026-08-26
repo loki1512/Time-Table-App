@@ -45,7 +45,7 @@ class Course(db.Model):
     area = db.Column(db.String(50))
     faculty = db.Column(db.String(300))
     short_name = db.Column(db.String(20))   # e.g., "FRA", "MM", "DS-I"
-    color = db.Column(db.String(7), default='#6366f1')  # hex color
+    color = db.Column(db.String(7), default='#2952CC')  # IIM Royal Blue
     course_link = db.Column(db.String(500), nullable=True)  # optional URL
 
     def to_dict(self):

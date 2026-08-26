@@ -1,4 +1,4 @@
-/* ─── ADMIN-SPECIFIC STYLES ───────────────────────────────────────────────── */
+﻿/* â”€â”€â”€ ADMIN-SPECIFIC STYLES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 /* Filter bar */
 .filter-bar {
@@ -152,8 +152,8 @@
 }
 
 a.acc-link-tag {
-  background: rgba(99,102,241,0.12);
-  border-color: rgba(99,102,241,0.3);
+  background: rgba(41,82,204,0.15);
+  border-color: rgba(41,82,204,0.35);
   color: var(--accent);
   text-decoration: none;
   text-transform: none;
@@ -161,7 +161,7 @@ a.acc-link-tag {
   transition: background 0.2s;
 }
 a.acc-link-tag:hover {
-  background: rgba(99,102,241,0.22);
+  background: rgba(41,82,204,0.28);
 }
 
 .acc-faculty {
@@ -192,11 +192,11 @@ a.acc-link-tag:hover {
   transition: var(--transition);
 }
 .acc-edit-btn {
-  background: rgba(99,102,241,0.1);
+  background: rgba(41,82,204,0.12);
   color: var(--accent-2);
-  border: 1px solid rgba(99,102,241,0.2);
+  border: 1px solid rgba(41,82,204,0.25);
 }
-.acc-edit-btn:hover { background: rgba(99,102,241,0.2); }
+.acc-edit-btn:hover { background: rgba(41,82,204,0.25); }
 .acc-del-btn {
   background: rgba(239,68,68,0.05);
   color: var(--danger);
@@ -243,7 +243,7 @@ a.acc-link-tag:hover {
   text-transform: uppercase;
 }
 .role-admin { background: rgba(245,158,11,0.15); color: var(--warning); border: 1px solid rgba(245,158,11,0.2); }
-.role-user { background: rgba(99,102,241,0.1); color: var(--accent-2); border: 1px solid rgba(99,102,241,0.15); }
+.role-user { background: rgba(41,82,204,0.12); color: var(--accent-2); border: 1px solid rgba(41,82,204,0.18); }
 
 /* Import Container */
 .import-container {
@@ -272,7 +272,7 @@ a.acc-link-tag:hover {
 .import-title { font-size: 24px; font-weight: 700; margin-bottom: 10px; }
 .import-desc { font-size: 14px; color: var(--text-2); line-height: 1.6; margin-bottom: 4px; }
 
-/* ── Two-column grid ── */
+/* â”€â”€ Two-column grid â”€â”€ */
 .import-options-grid {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -281,7 +281,7 @@ a.acc-link-tag:hover {
   margin-top: 12px;
 }
 
-/* ── Card ── */
+/* â”€â”€ Card â”€â”€ */
 .import-card {
   background: var(--surface-2, rgba(255,255,255,0.04));
   border: 1px solid var(--border, rgba(255,255,255,0.1));
@@ -296,7 +296,7 @@ a.acc-link-tag:hover {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: var(--primary, #6366f1);
+  color: var(--primary, #2952CC);
 }
 .import-card-header h3 {
   font-size: 16px;
@@ -316,7 +316,7 @@ a.acc-link-tag:hover {
   font-size: 12px;
 }
 
-/* ── Drop zone ── */
+/* â”€â”€ Drop zone â”€â”€ */
 .drop-zone {
   border: 2px dashed var(--border, rgba(255,255,255,0.15));
   border-radius: var(--radius-sm, 8px);
@@ -331,13 +331,13 @@ a.acc-link-tag:hover {
   color: var(--text-2);
 }
 .drop-zone:hover {
-  border-color: var(--primary, #6366f1);
-  background: rgba(99,102,241,0.05);
+  border-color: var(--primary, #2952CC);
+  background: rgba(41,82,204,0.07);
 }
 .drop-zone.drag-over {
-  border-color: var(--primary, #6366f1);
-  background: rgba(99,102,241,0.1);
-  color: var(--primary, #6366f1);
+  border-color: var(--primary, #2952CC);
+  background: rgba(41,82,204,0.12);
+  color: var(--primary, #2952CC);
 }
 .drop-zone.has-file {
   border-color: var(--success, #10b981);
@@ -347,7 +347,7 @@ a.acc-link-tag:hover {
 .drop-zone p { margin: 0; font-size: 13px; line-height: 1.6; }
 .drop-zone span { font-size: 12px; color: var(--text-3); }
 
-/* ── OR divider ── */
+/* â”€â”€ OR divider â”€â”€ */
 .import-or-divider {
   display: flex;
   flex-direction: column;
@@ -368,7 +368,7 @@ a.acc-link-tag:hover {
   background: var(--border, rgba(255,255,255,0.1));
 }
 .import-or-divider span {
-  background: var(--surface-1, #0f0f1a);
+  background: var(--surface-1, #050D1A);
   padding: 4px 0;
 }
 
@@ -395,7 +395,7 @@ a.acc-link-tag:hover {
 .import-result.success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: var(--success); }
 .import-result.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: var(--danger); }
 
-/* ── Responsive: stack on small screens ── */
+/* â”€â”€ Responsive: stack on small screens â”€â”€ */
 @media (max-width: 680px) {
   .import-options-grid {
     grid-template-columns: 1fr;
@@ -527,7 +527,7 @@ a.acc-link-tag:hover {
 }
 .color-preset:hover, .color-preset.selected { border-color: white; transform: scale(1.1); }
 
-/* ─── TIME SLOTS VIEW ─────────────────────────────────────────────────────── */
+/* â”€â”€â”€ TIME SLOTS VIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 .slots-container {
   max-width: 620px;
@@ -576,7 +576,7 @@ a.acc-link-tag:hover {
 .admin-slot-item:hover { border-color: var(--border-2); }
 
 .asi-slot-badge {
-  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+  background: linear-gradient(135deg, var(--accent), #C9A227);
   color: #fff;
   border-radius: 6px;
   padding: 6px 12px;
@@ -606,4 +606,5 @@ a.acc-link-tag:hover {
   gap: 6px;
   flex-shrink: 0;
 }
+
 
