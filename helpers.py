@@ -179,6 +179,83 @@ def import_excel(source):
     db.session.commit()
 
 
+# ─── Google Sheets Sync & Scheduler ───────────────────────────────────────────
+
+def sync_from_google_sheet(sync_url=None):
+    """Fetch timetable from Google Apps Script Web App proxy or direct export link."""
+    import base64
+    import io
+    from urllib.request import urlopen, Request
+    from config import Config
+
+    url = sync_url or Config.GOOGLE_SHEET_SYNC_URL
+    if not url:
+        return False, "Google Sheet Sync URL is not configured. Set GOOGLE_SHEET_SYNC_URL in env or enter the URL in Admin."
+
+    try:
+        req = Request(
+            url,
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        )
+        with urlopen(req, timeout=45) as resp:
+            content = resp.read()
+
+        file_bytes = None
+        try:
+            decoded = base64.b64decode(content, validate=True)
+            if decoded.startswith(b'PK'):  # Standard zip/xlsx header
+                file_bytes = decoded
+        except Exception:
+            pass
+
+        if not file_bytes:
+            if content.startswith(b'PK'):
+                file_bytes = content
+            else:
+                return False, "Invalid response from Google Sheets proxy. Verify the script URL and permissions."
+
+        stream = io.BytesIO(file_bytes)
+        import_excel(stream)
+        return True, "Timetable successfully synced from Google Sheet!"
+    except Exception as e:
+        return False, f"Failed to sync: {str(e)}"
+
+
+def start_morning_scheduler(app):
+    """Start a background daemon thread that checks every morning at 06:00 AM IST to auto-sync."""
+    import threading
+    import time
+    from datetime import datetime, timedelta, timezone
+
+    def _scheduler_loop():
+        time.sleep(10)  # Initial delay after server boot
+        # IST is UTC+5:30
+        ist_tz = timezone(timedelta(hours=5, minutes=30))
+        last_synced_date = None
+
+        while True:
+            try:
+                now_ist = datetime.now(ist_tz)
+                today_str = now_ist.strftime('%Y-%m-%d')
+
+                # Check if it's 6:00 AM or later and we haven't synced today yet
+                if now_ist.hour >= 6 and last_synced_date != today_str:
+                    from config import Config
+                    if Config.GOOGLE_SHEET_SYNC_URL:
+                        with app.app_context():
+                            print(f'[AUTO-SYNC] [{now_ist.strftime("%Y-%m-%d %H:%M:%S")}] Running daily morning timetable sync...')
+                            success, msg = sync_from_google_sheet()
+                            print(f'[AUTO-SYNC] Result: {msg}')
+                            if success:
+                                last_synced_date = today_str
+            except Exception as ex:
+                print(f'[AUTO-SYNC Error] {ex}')
+
+            time.sleep(300)  # Check every 5 minutes
+
+    thread = threading.Thread(target=_scheduler_loop, daemon=True)
+    thread.start()
+
 # ─── DB seeding ───────────────────────────────────────────────────────────────
 
 def create_default_admin():
@@ -191,3 +268,4 @@ def create_default_admin():
         db.session.commit()
         print('[OK] Default admin created: admin / admin123')
     seed_default_slots()
+

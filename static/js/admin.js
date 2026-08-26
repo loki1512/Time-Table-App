@@ -1,4 +1,4 @@
-﻿/* â”€â”€â”€ IIM Sambalpur â€“ Admin Panel JS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€â”€ IIM Sambalpur â€“ Admin Panel JS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 'use strict';
 
 const COLORS = ['#2952CC','#4F78E8','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#14b8a6'];
@@ -398,17 +398,69 @@ async function toggleAdmin(id, makeAdmin) {
 // â”€â”€â”€ IMPORT EXCEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function loadExcelFiles() {
   const select = el('excelFileSelect');
-  if (!select) return;
-  select.innerHTML = '<option value="">Loading files...</option>';
-  try {
-    const files = await api('/api/admin/excel-files');
-    if (files.length === 0) {
-      select.innerHTML = '<option value="">No Excel files found</option>';
-    } else {
-      select.innerHTML = files.map(f => `<option value="${escHtml(f)}">${escHtml(f)}</option>`).join('');
+  if (select) {
+    select.innerHTML = '<option value="">Loading files...</option>';
+    try {
+      const files = await api('/api/admin/excel-files');
+      if (files.length === 0) {
+        select.innerHTML = '<option value="">No Excel files found</option>';
+      } else {
+        select.innerHTML = files.map(f => `<option value="${escHtml(f)}">${escHtml(f)}</option>`).join('');
+      }
+    } catch (err) {
+      select.innerHTML = `<option value="">Error loading files: ${err.message}</option>`;
     }
+  }
+
+  // Check server-side Google Sync configuration
+  try {
+    const status = await api('/api/admin/sync-status');
+    const indicator = el('syncStatusIndicator');
+    if (status.configured && indicator) {
+      indicator.style.display = 'block';
+    }
+  } catch (e) {}
+
+  // Restore saved Google Apps Script Sync URL from localStorage if input is empty
+  const savedSyncUrl = localStorage.getItem('iim_google_sync_url');
+  const syncInput = el('googleSyncUrlInput');
+  if (syncInput && savedSyncUrl && !syncInput.value) {
+    syncInput.value = savedSyncUrl;
+  }
+}
+
+async function syncGoogleSheet() {
+  const input = el('googleSyncUrlInput');
+  const btn = el('googleSyncBtn');
+  const result = el('googleSyncResult');
+  const url = input ? input.value.trim() : '';
+
+  if (url) {
+    // Cache in localStorage
+    localStorage.setItem('iim_google_sync_url', url);
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Syncing from Google...';
+  result.style.display = 'none';
+
+  try {
+    const data = await api('/api/admin/sync-google-sheet', {
+      method: 'POST',
+      body: JSON.stringify({ url })
+    });
+    result.className = 'import-result success';
+    result.textContent = '[OK] ' + (data.message || 'Timetable synced successfully!');
+    result.style.display = 'block';
+    showToast('Timetable synced from Google Sheet!', 'success');
   } catch (err) {
-    select.innerHTML = `<option value="">Error loading files: ${err.message}</option>`;
+    result.className = 'import-result error';
+    result.textContent = '[Error] ' + err.message;
+    result.style.display = 'block';
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sync Timetable Now';
   }
 }
 

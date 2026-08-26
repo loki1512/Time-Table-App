@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -152,16 +152,40 @@
               <p class="import-desc">Choose how to import your timetable. This will overwrite all existing sessions.</p>
             </div>
 
-            <!-- Two-column import options -->
+            <!-- Three-option import options -->
             <div class="import-options-grid">
 
-              <!-- Option A: Upload from local machine -->
+              <!-- Option 1: Live Google Sheet Sync -->
+              <div class="import-card featured-sync-card" id="googleSyncCard">
+                <div class="import-card-header">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                  <h3>Sync from Google Sheet</h3>
+                </div>
+                <p class="import-card-desc">1-Click Live Sync with the institutional Google Sheet. Updates timetable directly into Supabase for everyone.</p>
+
+                <div class="sync-status-indicator" id="syncStatusIndicator" style="display:none; font-size:12px; margin-top:2px;">
+                  <span class="badge" style="background:rgba(16,185,129,0.15); color:var(--success); padding:3px 8px; border-radius:4px;">✓ Pre-configured on Server &amp; Auto-Syncs Every Morning (6 AM IST)</span>
+                </div>
+
+                <div class="form-group" id="googleSyncUrlGroup" style="margin-top: 4px;">
+                  <label class="form-label">Apps Script Web App URL <span style="font-weight:400;color:var(--text-3);font-size:11px;">(saved on server/browser)</span></label>
+                  <input type="url" id="googleSyncUrlInput" class="form-input" placeholder="https://script.google.com/macros/s/.../exec" />
+                </div>
+
+                <button class="btn-primary btn-lg" id="googleSyncBtn" onclick="syncGoogleSheet()">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  Sync Timetable Now
+                </button>
+                <div class="import-result" id="googleSyncResult" style="display:none"></div>
+              </div>
+
+              <!-- Option 2: Upload from local machine -->
               <div class="import-card" id="uploadCard">
                 <div class="import-card-header">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  <h3>Upload from your device</h3>
+                  <h3>Upload from Device</h3>
                 </div>
-                <p class="import-card-desc">Pick any <code>.xlsx</code> file from your computer. It is read in memory and <strong>never stored</strong> on the server.</p>
+                <p class="import-card-desc">Pick any <code>.xlsx</code> file from your computer. It is read in memory and <strong>never stored</strong> on disk.</p>
 
                 <!-- Drag-and-drop zone -->
                 <div class="drop-zone" id="dropZone"
@@ -181,16 +205,11 @@
                 <div class="import-result" id="uploadResult" style="display:none"></div>
               </div>
 
-              <!-- OR divider -->
-              <div class="import-or-divider">
-                <span>OR</span>
-              </div>
-
-              <!-- Option B: Select from server files -->
+              <!-- Option 3: Select from server files -->
               <div class="import-card">
                 <div class="import-card-header">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                  <h3>Select a server file</h3>
+                  <h3>Server File</h3>
                 </div>
                 <p class="import-card-desc">Choose from <code>.xlsx</code> files already present in the app directory on the server.</p>
 

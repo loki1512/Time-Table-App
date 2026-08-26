@@ -27,6 +27,10 @@ class Config:
 
     # ── Security ──────────────────────────────────────────────────────────────
     SECRET_KEY = os.environ.get('SECRET_KEY', 'iim-sambalpur-timetable-secret-2026')
+    CRON_SECRET = os.environ.get('CRON_SECRET', 'iim-timetable-cron-secret-2026')
+
+    # ── Google Sheets Sync ─────────────────────────────────────────────────────
+    GOOGLE_SHEET_SYNC_URL = os.environ.get('GOOGLE_SHEET_SYNC_URL', '')
 
     # ── Database ───────────────────────────────────────────────────────────────
     _db_url = os.environ.get('DATABASE_URL', 'sqlite:///timetable.db')

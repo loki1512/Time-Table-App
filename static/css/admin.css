@@ -1,4 +1,4 @@
-﻿/* â”€â”€â”€ ADMIN-SPECIFIC STYLES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€â”€ ADMIN-SPECIFIC STYLES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 /* Filter bar */
 .filter-bar {
@@ -272,16 +272,16 @@ a.acc-link-tag:hover {
 .import-title { font-size: 24px; font-weight: 700; margin-bottom: 10px; }
 .import-desc { font-size: 14px; color: var(--text-2); line-height: 1.6; margin-bottom: 4px; }
 
-/* â”€â”€ Two-column grid â”€â”€ */
+/* ── Three-column grid ── */
 .import-options-grid {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 0 20px;
-  align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  align-items: stretch;
   margin-top: 12px;
 }
 
-/* â”€â”€ Card â”€â”€ */
+/* ── Card ── */
 .import-card {
   background: var(--surface-2, rgba(255,255,255,0.04));
   border: 1px solid var(--border, rgba(255,255,255,0.1));
@@ -290,6 +290,15 @@ a.acc-link-tag:hover {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.import-card.featured-sync-card {
+  border-color: rgba(201, 162, 39, 0.4);
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.06) 0%, var(--surface-2) 100%);
+}
+
+.import-card.featured-sync-card .import-card-header {
+  color: var(--accent-3, #C9A227);
 }
 
 .import-card-header {

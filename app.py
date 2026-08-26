@@ -34,6 +34,10 @@ def create_app(config_class=Config):
     app.register_blueprint(main_bp)
     app.register_blueprint(admin_bp)
 
+    # ── Start Daily Morning Auto-Sync Scheduler ──────────────────────────────
+    from helpers import start_morning_scheduler
+    start_morning_scheduler(app)
+
     return app
 
 

@@ -109,6 +109,22 @@ def health():
     return jsonify({'status': 'ok', 'database': 'connected'})
 
 
+@main_bp.route('/api/cron/sync', methods=['GET', 'POST'])
+def cron_sync():
+    """Triggered by scheduled morning cron or Google Apps Script timer."""
+    from config import Config
+    from helpers import sync_from_google_sheet
+
+    key = request.args.get('key') or request.headers.get('X-Cron-Key')
+    if key != Config.CRON_SECRET:
+        return jsonify({'error': 'Unauthorized cron key'}), 403
+
+    success, msg = sync_from_google_sheet()
+    if success:
+        return jsonify({'status': 'ok', 'message': msg})
+    return jsonify({'status': 'error', 'message': msg}), 500
+
+
 # ─── PWA ──────────────────────────────────────────────────────────────────────
 
 @main_bp.route('/manifest.json')

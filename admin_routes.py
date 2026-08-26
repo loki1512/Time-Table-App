@@ -282,6 +282,40 @@ def admin_upload_excel():
         return jsonify({'error': str(e)}), 500
 
 
+@admin_bp.route('/api/admin/sync-google-sheet', methods=['POST'])
+@login_required
+def admin_sync_google_sheet():
+    """Fetch timetable from Google Apps Script Web App proxy or direct export link."""
+    from helpers import sync_from_google_sheet
+
+    err = _require_admin()
+    if err:
+        return err
+
+    req_data = request.get_json(silent=True) or {}
+    sync_url = req_data.get('url', '').strip()
+
+    success, msg = sync_from_google_sheet(sync_url)
+    if success:
+        return jsonify({'success': True, 'message': msg})
+    else:
+        return jsonify({'error': msg}), 400
+
+
+@admin_bp.route('/api/admin/sync-status', methods=['GET'])
+@login_required
+def admin_sync_status():
+    """Return whether server has a default GOOGLE_SHEET_SYNC_URL configured."""
+    from config import Config
+    err = _require_admin()
+    if err:
+        return err
+    return jsonify({
+        'configured': bool(Config.GOOGLE_SHEET_SYNC_URL),
+        'has_env_url': bool(Config.GOOGLE_SHEET_SYNC_URL)
+    })
+
+
 @admin_bp.route('/api/admin/users')
 @login_required
 def admin_users():
