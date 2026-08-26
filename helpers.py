@@ -260,6 +260,71 @@ def start_morning_scheduler(app):
     thread = threading.Thread(target=_scheduler_loop, daemon=True)
     thread.start()
 
+
+def broadcast_push_notification(title, body, url='/', tag='announcement'):
+    """Send a custom push notification to all users who have an active push subscription."""
+    import json
+    from datetime import datetime
+    from pywebpush import webpush, WebPushException
+    from config import Config
+    from models import Notification
+    from extensions import db
+
+    if not Config.VAPID_PUBLIC_KEY or not Config.VAPID_PRIVATE_KEY:
+        return {'total': 0, 'sent': 0, 'failed': 0, 'error': 'VAPID keys not configured.'}
+
+    # Query all active subscriptions in existing DB without any schema changes
+    subscriptions = Notification.query.filter(Notification.push_subscription.isnot(None)).all()
+    if not subscriptions:
+        return {'total': 0, 'sent': 0, 'failed': 0, 'message': 'No users have enabled push notifications yet.'}
+
+    vapid_claims = {'sub': f'mailto:{Config.VAPID_CLAIM_EMAIL}'}
+    payload = json.dumps({
+        'title': title,
+        'body': body,
+        'url': url or '/',
+        'tag': tag or 'announcement',
+        'timestamp': int(datetime.utcnow().timestamp() * 1000)
+    })
+
+    sent = 0
+    failed = 0
+
+    for notif in subscriptions:
+        try:
+            if not notif.push_subscription:
+                continue
+            sub_info = json.loads(notif.push_subscription)
+            if not isinstance(sub_info, dict) or not sub_info.get('endpoint'):
+                continue
+
+            webpush(
+                subscription_info=sub_info,
+                data=payload,
+                vapid_private_key=Config.VAPID_PRIVATE_KEY,
+                vapid_claims=vapid_claims,
+                timeout=10
+            )
+            sent += 1
+        except WebPushException as ex:
+            failed += 1
+            # If subscription expired/unregistered on client (404/410), clear it safely
+            if hasattr(ex, 'response') and ex.response is not None and ex.response.status_code in [404, 410]:
+                try:
+                    notif.push_subscription = None
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+        except Exception:
+            failed += 1
+
+    return {
+        'total': len(subscriptions),
+        'sent': sent,
+        'failed': failed,
+        'message': f'Notification sent to {sent} of {len(subscriptions)} subscriber(s).'
+    }
+
 # ─── DB seeding ───────────────────────────────────────────────────────────────
 
 def create_default_admin():

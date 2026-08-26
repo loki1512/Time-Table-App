@@ -227,6 +227,13 @@ def api_slots():
 
 # ─── Notification API (personal, any logged-in user) ─────────────────────────
 
+@main_bp.route('/api/notifications/vapid-public-key')
+def vapid_public_key():
+    """Return the VAPID public key for web push registration."""
+    from config import Config
+    return jsonify({'publicKey': Config.VAPID_PUBLIC_KEY})
+
+
 @main_bp.route('/api/notifications/subscribe', methods=['POST'])
 @login_required
 def subscribe_notifications():

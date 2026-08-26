@@ -56,6 +56,10 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           <span>Time Slots</span>
         </button>
+        <button class="nav-item" onclick="showAdminView('broadcast')" id="navBroadcast">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+          <span>Broadcast Alerts</span>
+        </button>
       </nav>
 
       <div class="sidebar-footer">
@@ -252,6 +256,57 @@
           </div>
         </section>
 
+        <!-- BROADCAST NOTIFICATIONS VIEW -->
+        <section class="view" id="adminViewBroadcast">
+          <div class="broadcast-container" style="max-width: 650px; margin: 0 auto;">
+            <div class="import-hero" style="padding: 16px 0 24px;">
+              <div class="import-icon" style="color: var(--accent-3); background: rgba(201,162,39,0.12); border-color: rgba(201,162,39,0.3);">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </div>
+              <h2 class="import-title">Broadcast Push Notification</h2>
+              <p class="import-desc">Send instant custom alerts to all students &amp; faculty who have enabled push notifications on their devices.</p>
+              <div id="subscriberCountBadge" style="margin-top: 8px; font-size: 13px; color: var(--accent-2);">
+                <span>Loading active subscribers...</span>
+              </div>
+            </div>
+
+            <div class="import-card" style="gap: 18px;">
+              <div class="form-group">
+                <label class="form-label">Notification Title</label>
+                <input type="text" id="notifTitle" class="form-input" placeholder="e.g. Schedule Change: FRA-1 Moved to Slot 3" required />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Message Body</label>
+                <textarea id="notifBody" class="form-input" rows="3" placeholder="e.g. Today's FRA-1 session with Prof. Seema Gupta has been moved from 9:30 AM to 2:00 PM." required></textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Click Action URL <span style="font-weight:400;color:var(--text-3);font-size:12px;">(optional, defaults to Timetable)</span></label>
+                <input type="text" id="notifUrl" class="form-input" placeholder="/" value="/" />
+              </div>
+
+              <!-- Live Preview Card -->
+              <div class="notif-preview-box" style="background: var(--bg-3); border: 1px solid var(--border-2); border-radius: var(--radius-sm); padding: 14px 16px;">
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); margin-bottom: 8px;">Preview on Mobile / Desktop:</div>
+                <div style="display: flex; gap: 12px; align-items: flex-start;">
+                  <img src="/static/icons/icon-72.png" width="36" height="36" style="border-radius: 8px; flex-shrink: 0;" />
+                  <div>
+                    <div id="previewTitle" style="font-weight: 600; font-size: 14px; color: var(--text);">Notification Title</div>
+                    <div id="previewBody" style="font-size: 12px; color: var(--text-2); margin-top: 2px;">Message body will appear here...</div>
+                  </div>
+                </div>
+              </div>
+
+              <button class="btn-primary btn-lg" id="sendBroadcastBtn" onclick="sendBroadcastNotification()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Send Notification to All Users
+              </button>
+              <div class="import-result" id="broadcastResult" style="display:none"></div>
+            </div>
+          </div>
+        </section>
+
       </div>
     </main>
   </div>
@@ -404,7 +459,7 @@
   <!-- Toast -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/static/js/admin.js?v=2.2"></script>
+  <script src="/static/js/admin.js?v=2.4"></script>
 </body>
 </html>
 

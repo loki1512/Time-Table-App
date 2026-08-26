@@ -42,8 +42,15 @@ async function api(url, opts = {}) {
 function openSidebar() { el('sidebar').classList.add('open'); el('sidebarOverlay').classList.add('show'); }
 function closeSidebar() { el('sidebar').classList.remove('open'); el('sidebarOverlay').classList.remove('show'); }
 
-// â”€â”€â”€ ADMIN VIEW SWITCHING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const adminViews = { sessions: 'Sessions', courses: 'Courses', users: 'Users', import: 'Import Excel', slots: 'Time Slots' };
+// ─── ADMIN VIEW SWITCHING ──────────────────────────────────────────────────
+const adminViews = { 
+  sessions: 'Sessions', 
+  courses: 'Courses', 
+  users: 'Users', 
+  import: 'Import Excel', 
+  slots: 'Time Slots',
+  broadcast: 'Broadcast Alerts'
+};
 
 function showAdminView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -76,6 +83,7 @@ function showAdminView(name) {
   if (name === 'users') loadAdminUsers();
   if (name === 'slots') loadAdminSlots();
   if (name === 'import') loadExcelFiles();
+  if (name === 'broadcast') loadBroadcastInfo();
 }
 
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -467,6 +475,79 @@ async function syncGoogleSheet() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sync Timetable Now';
+  }
+}
+
+// ─── BROADCAST NOTIFICATIONS ────────────────────────────────────────────────
+async function loadBroadcastInfo() {
+  const badge = el('subscriberCountBadge');
+  if (badge) {
+    try {
+      const data = await api('/api/admin/notification-subscribers-count');
+      badge.innerHTML = `<span class="badge" style="background:rgba(41,82,204,0.15); color:var(--accent-2); padding:4px 10px; border-radius:6px;">📱 <strong>${data.count}</strong> user(s) subscribed to live push alerts</span>`;
+    } catch (e) {
+      badge.textContent = '';
+    }
+  }
+
+  // Bind live preview
+  const titleInput = el('notifTitle');
+  const bodyInput = el('notifBody');
+  const prevTitle = el('previewTitle');
+  const prevBody = el('previewBody');
+
+  if (titleInput && prevTitle) {
+    titleInput.oninput = () => {
+      prevTitle.textContent = titleInput.value.trim() || 'Notification Title';
+    };
+  }
+  if (bodyInput && prevBody) {
+    bodyInput.oninput = () => {
+      prevBody.textContent = bodyInput.value.trim() || 'Message body will appear here...';
+    };
+  }
+}
+
+async function sendBroadcastNotification() {
+  const title = el('notifTitle')?.value.trim();
+  const body = el('notifBody')?.value.trim();
+  const url = el('notifUrl')?.value.trim() || '/';
+  const btn = el('sendBroadcastBtn');
+  const result = el('broadcastResult');
+
+  if (!title || !body) {
+    showToast('Please enter both Title and Message', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending Push Alerts...';
+  result.style.display = 'none';
+
+  try {
+    const data = await api('/api/admin/broadcast-notification', {
+      method: 'POST',
+      body: JSON.stringify({ title, body, url })
+    });
+    result.className = 'import-result success';
+    result.textContent = '[OK] ' + (data.message || 'Notification broadcast successfully!');
+    result.style.display = 'block';
+    showToast(data.message || 'Sent successfully!', 'success');
+
+    // Clear form
+    el('notifTitle').value = '';
+    el('notifBody').value = '';
+    el('previewTitle').textContent = 'Notification Title';
+    el('previewBody').textContent = 'Message body will appear here...';
+    loadBroadcastInfo();
+  } catch (err) {
+    result.className = 'import-result error';
+    result.textContent = '[Error] ' + err.message;
+    result.style.display = 'block';
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Notification to All Users';
   }
 }
 

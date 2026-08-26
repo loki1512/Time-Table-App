@@ -29,6 +29,17 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'iim-sambalpur-timetable-secret-2026')
     CRON_SECRET = os.environ.get('CRON_SECRET', 'iim-timetable-cron-secret-2026')
 
+    # ── Web Push Notifications (VAPID) ─────────────────────────────────────────
+    VAPID_PUBLIC_KEY = os.environ.get(
+        'VAPID_PUBLIC_KEY',
+        'BOcditSh3Ti6xtVAQr81sfsDxnxHxqoEcxj-dOUVIusTrOm2IKRnG__SksXI5kC-YnnfY4RR1Y6JSyhJVBpTgt8'
+    )
+    VAPID_PRIVATE_KEY = os.environ.get(
+        'VAPID_PRIVATE_KEY',
+        'JKKuNN43JMCmJys76-Mmv2YAiP0_jjTCNdNLyZA3IHU'
+    )
+    VAPID_CLAIM_EMAIL = os.environ.get('VAPID_CLAIM_EMAIL', 'admin@iimsambalpur.ac.in')
+
     # ── Google Sheets Sync ─────────────────────────────────────────────────────
     GOOGLE_SHEET_SYNC_URL = os.environ.get('GOOGLE_SHEET_SYNC_URL', '')
 

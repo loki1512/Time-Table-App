@@ -511,6 +511,37 @@ async function initNotifications() {
   }
 }
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+async function getBrowserPushSubscription() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const { publicKey } = await api('/api/notifications/vapid-public-key');
+      if (!publicKey) return null;
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      });
+    }
+    return sub ? sub.toJSON() : null;
+  } catch (err) {
+    console.warn('[Push] Subscription failed:', err);
+    return null;
+  }
+}
+
 async function requestNotifPermission() {
   const perm = await Notification.requestPermission();
   initNotifications();
@@ -533,17 +564,18 @@ async function loadNotifSettings() {
 async function saveNotifSettings() {
   if (Notification.permission !== 'granted') return;
   try {
+    const pushSub = await getBrowserPushSubscription();
     await api('/api/notifications/subscribe', {
       method: 'POST',
       body: JSON.stringify({
-        subscription: null,  // local notifications only (no push server needed)
+        subscription: pushSub,
         notify_before_class: el('toggleBeforeClass').checked,
         notify_minutes_before: parseInt(el('minutesBefore').value),
         notify_morning: el('toggleMorning').checked,
         morning_time: el('morningTime').value,
       })
     });
-    showToast('Settings saved', 'success');
+    showToast('Settings saved & Push notifications active!', 'success');
     scheduleLocalNotifications();
   } catch (e) {
     showToast('Failed to save settings', 'error');

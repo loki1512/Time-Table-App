@@ -318,6 +318,40 @@ def admin_sync_status():
     })
 
 
+@admin_bp.route('/api/admin/notification-subscribers-count', methods=['GET'])
+@login_required
+def admin_notification_subscribers_count():
+    """Return the total number of users with active push notification subscriptions."""
+    err = _require_admin()
+    if err:
+        return err
+    count = Notification.query.filter(Notification.push_subscription.isnot(None)).count()
+    return jsonify({'count': count})
+
+
+@admin_bp.route('/api/admin/broadcast-notification', methods=['POST'])
+@login_required
+def admin_broadcast_notification():
+    """Send a custom push notification to all subscribed users."""
+    from helpers import broadcast_push_notification
+    err = _require_admin()
+    if err:
+        return err
+
+    data = request.get_json(silent=True) or {}
+    title = (data.get('title') or '').strip()
+    body = (data.get('body') or '').strip()
+    url = (data.get('url') or '/').strip()
+
+    if not title or not body:
+        return jsonify({'error': 'Title and Message are required.'}), 400
+
+    result = broadcast_push_notification(title, body, url)
+    if result.get('error'):
+        return jsonify(result), 500
+    return jsonify(result)
+
+
 @admin_bp.route('/api/admin/users')
 @login_required
 def admin_users():
