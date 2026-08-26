@@ -13,7 +13,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
 from extensions import db
-from models import Course, ClassSession, TimeSlot, User
+from models import Course, ClassSession, TimeSlot, User, Notification
 from helpers import import_excel
 
 admin_bp = Blueprint('admin', __name__)
