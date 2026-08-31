@@ -84,13 +84,16 @@ def import_excel(source):
     course_color_idx = 0
     courses_by_short = {}
 
-    # Read course table at bottom (after row 60 roughly)
-    for row in ws.iter_rows(min_row=60, max_row=ws.max_row, values_only=True):
+    # Read course table at bottom (rows where col[0] is a numeric course number)
+    for row in ws.iter_rows(min_row=1, max_row=ws.max_row, values_only=True):
         if row[0] is None:
             continue
         try:
             float(row[0])
         except (TypeError, ValueError):
+            continue
+        # Skip rows that are actually date values (datetime parses to float too)
+        if isinstance(row[0], datetime):
             continue
 
         no = float(row[0])
@@ -145,7 +148,7 @@ def import_excel(source):
     # Delete existing sessions before re-import
     ClassSession.query.delete()
 
-    for row in ws.iter_rows(min_row=4, max_row=59, values_only=True):
+    for row in ws.iter_rows(min_row=4, max_row=ws.max_row, values_only=True):
         if row[0] is None:
             continue
         if not isinstance(row[0], datetime):
