@@ -9,10 +9,19 @@ const state = {
   weekStart: null,
   calYear: null,
   calMonth: null,
-  allSessions: {},   // date -> [sessions]
+  allSessions: {},   // date -> [sessions]  (populated by prefetch)
   courses: [],
   notifTimer: null,
+
+  // Cache tracking
+  sessionsCachedAt: null,      // timestamp of last full fetch
+  coursesCachedAt: null,       // timestamp of last courses fetch
+  prefetchPromise: null,        // deduplicates concurrent prefetch calls
 };
+
+// Cache TTLs
+const SESSIONS_TTL_MS = 5 * 60 * 1000;   // 5 minutes
+const COURSES_TTL_MS  = 10 * 60 * 1000;  // 10 minutes
 
 const SLOT_TIMES = {
   1: { start: '09:30', end: '11:00', label: '09:30 AM' },
@@ -122,6 +131,47 @@ function updateDateBadge() {
   el('dateBadge').textContent = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
+// ─── SESSION CACHE (prefetch entire term) ─────────────────────────────────────
+
+async function ensureSessionsLoaded({ forceRefresh = false } = {}) {
+  const now = Date.now();
+  const cacheOk = state.sessionsCachedAt && (now - state.sessionsCachedAt) < SESSIONS_TTL_MS;
+  if (!forceRefresh && cacheOk && Object.keys(state.allSessions).length > 0) return;
+
+  if (state.prefetchPromise) { await state.prefetchPromise; return; }
+
+  state.prefetchPromise = (async () => {
+    try {
+      const sessions = await api('/api/sessions?start=2026-07-01&end=2026-12-31');
+      state.allSessions = {};
+      sessions.forEach(s => {
+        if (!state.allSessions[s.date]) state.allSessions[s.date] = [];
+        state.allSessions[s.date].push(s);
+      });
+      state.sessionsCachedAt = Date.now();
+    } finally {
+      state.prefetchPromise = null;
+    }
+  })();
+
+  await state.prefetchPromise;
+}
+
+function getCachedSessions(dateStr) { return state.allSessions[dateStr] || []; }
+
+function refreshSessionsInBackground() {
+  ensureSessionsLoaded({ forceRefresh: true }).catch(() => {});
+}
+
+async function ensureCoursesLoaded({ forceRefresh = false } = {}) {
+  const now = Date.now();
+  const cacheOk = state.coursesCachedAt && (now - state.coursesCachedAt) < COURSES_TTL_MS;
+  if (!forceRefresh && cacheOk && state.courses.length > 0) return;
+  const courses = await api('/api/courses');
+  state.courses = courses;
+  state.coursesCachedAt = Date.now();
+}
+
 // ─── TODAY VIEW ───────────────────────────────────────────────────────────────
 async function loadToday() {
   const now = new Date();
@@ -131,10 +181,16 @@ async function loadToday() {
   el('todayFullDate').textContent = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
   try {
-    const data = await api('/api/today');
-    renderTodaySessions(data.sessions, now);
+    await ensureSessionsLoaded();
+    renderTodaySessions(getCachedSessions(state.today), now);
   } catch (err) {
-    el('todaySessions').innerHTML = `<div class="empty-state"><span class="empty-icon">⚠️</span><div class="empty-title">Failed to load</div><div class="empty-desc">${err.message}</div></div>`;
+    // Fallback to direct API
+    try {
+      const data = await api('/api/today');
+      renderTodaySessions(data.sessions, now);
+    } catch (err2) {
+      el('todaySessions').innerHTML = `<div class="empty-state"><span class="empty-icon">⚠️</span><div class="empty-title">Failed to load</div><div class="empty-desc">${err2.message}</div></div>`;
+    }
   }
 }
 
@@ -283,8 +339,12 @@ async function loadWeek() {
   el('weekLabel').textContent = `${fmtShort(mon)} – ${fmtShort(sun)}`;
 
   try {
-    const data = await api(`/api/sessions/week?start=${startStr}&end=${endStr}`);
-    renderWeek(data.sessions, mon, sun, today);
+    await ensureSessionsLoaded();
+    // Collect all sessions for this week from cache
+    const days = [];
+    for (let i = 0; i <= 6; i++) days.push(addDays(mon, i));
+    const weekSessions = days.flatMap(d => state.allSessions[fmt(d)] || []);
+    renderWeek(weekSessions, mon, sun, today);
   } catch (err) {
     el('weekGrid').innerHTML = `<div class="empty-state"><div class="empty-title">Failed to load</div></div>`;
   }
@@ -340,39 +400,24 @@ function changeWeek(dir) {
   loadWeek();
 }
 
-// ─── CALENDAR VIEW ────────────────────────────────────────────────────────────
-let calSessions = {};
-
-async function loadCalendarSessions(year, month) {
-  const start = fmt(new Date(year, month, 1));
-  const end = fmt(new Date(year, month + 1, 0));
-  try {
-    const sessions = await api(`/api/sessions?start=${start}&end=${end}`);
-    calSessions = {};
-    sessions.forEach(s => {
-      if (!calSessions[s.date]) calSessions[s.date] = [];
-      calSessions[s.date].push(s);
-    });
-  } catch (e) {
-    console.error(e);
-  }
-}
-
+// ─── CALENDAR VIEW ─────────────────────────────────────────────────────────────────
 async function renderCalendar() {
   const today = new Date();
   if (state.calYear === null) {
     state.calYear = today.getFullYear();
     state.calMonth = today.getMonth();
   }
+  // Ensure all sessions are in memory, then paint synchronously
+  await ensureSessionsLoaded();
+  _paintCalendar(today);
+}
 
-  await loadCalendarSessions(state.calYear, state.calMonth);
-
+function _paintCalendar(today) {
   const monthName = new Date(state.calYear, state.calMonth).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
   el('calMonthLabel').textContent = monthName;
 
   const firstDay = new Date(state.calYear, state.calMonth, 1);
   const lastDay = new Date(state.calYear, state.calMonth + 1, 0);
-  // Monday-first: Monday=0 ... Sunday=6
   let startPad = (firstDay.getDay() + 6) % 7;
 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -383,37 +428,31 @@ async function renderCalendar() {
     </div>
     <div class="cal-days">`;
 
-  // Empty cells
-  for (let i = 0; i < startPad; i++) {
-    html += '<div class="cal-day empty"></div>';
-  }
+  for (let i = 0; i < startPad; i++) html += '<div class="cal-day empty"></div>';
 
   for (let d = 1; d <= lastDay.getDate(); d++) {
     const date = new Date(state.calYear, state.calMonth, d);
     const dateStr = fmt(date);
     const isToday = dateStr === fmt(today);
-    const sessions = calSessions[dateStr] || [];
+    const sessions = state.allSessions[dateStr] || [];
     const dots = sessions.slice(0, 4).map(s => {
       const color = s.course?.color || (s.is_special ? '#f59e0b' : '#6366f1');
       return `<div class="cal-dot" style="background:${color}"></div>`;
     }).join('');
-
     html += `
       <div class="cal-day${isToday ? ' today' : ''}${sessions.length > 0 ? ' has-class' : ''}" onclick="showCalDay('${dateStr}')">
         <div class="cal-day-num">${d}</div>
         ${dots ? `<div class="cal-dots">${dots}</div>` : ''}
       </div>`;
   }
-
   html += '</div>';
   el('calendarGrid').innerHTML = html;
 }
 
 function showCalDay(dateStr) {
-  const sessions = calSessions[dateStr] || [];
+  const sessions = state.allSessions[dateStr] || [];
   const d = toLocalDate(dateStr);
   el('calDetailDate').textContent = d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
-
   if (sessions.length === 0) {
     el('calDetailSessions').innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-desc">No sessions on this day.</div></div>';
   } else {
@@ -431,48 +470,59 @@ function showCalDay(dateStr) {
   el('calDetail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function closeCalDetail() {
-  el('calDetail').style.display = 'none';
-}
+function closeCalDetail() { el('calDetail').style.display = 'none'; }
 
 function changeMonth(dir) {
   state.calMonth += dir;
   if (state.calMonth > 11) { state.calMonth = 0; state.calYear++; }
   if (state.calMonth < 0) { state.calMonth = 11; state.calYear--; }
   el('calDetail').style.display = 'none';
-  renderCalendar();
+  // Paint instantly from cache — no network call
+  _paintCalendar(new Date());
 }
 
-// ─── COURSES VIEW ─────────────────────────────────────────────────────────────
+// ─── COURSES VIEW ───────────────────────────────────────────────────────────────
 async function loadCourses() {
-  try {
-    const courses = await api('/api/courses');
-    state.courses = courses;
-    if (courses.length === 0) {
-      el('coursesGrid').innerHTML = `<div class="empty-state"><span class="empty-icon">📚</span><div class="empty-title">No courses</div></div>`;
-      return;
+  if (state.courses.length > 0) {
+    renderCourses(state.courses);
+    const now = Date.now();
+    if (!state.coursesCachedAt || (now - state.coursesCachedAt) > COURSES_TTL_MS) {
+      ensureCoursesLoaded({ forceRefresh: true }).then(() => renderCourses(state.courses)).catch(() => {});
     }
-    el('coursesGrid').innerHTML = courses.map(c => {
-      const hasLink = c.course_link && c.course_link.trim() !== '';
-      const cardContent = `
-        <div class="course-abbr">${escHtml(c.short_name || c.code)}</div>
-        <div class="course-name">${escHtml(c.name)}</div>
-        <div class="course-meta">
-          <span class="course-tag">${c.credits} cr</span>
-          ${c.area ? `<span class="course-tag">${escHtml(c.area)}</span>` : ''}
-          <span class="course-tag">${escHtml(c.code)}</span>
-        </div>
-        ${c.faculty ? `<div class="course-faculty">👤 ${escHtml(c.faculty)}</div>` : ''}
-        ${hasLink ? `<div class="course-link-hint">View Course →</div>` : ''}`;
-      if (hasLink) {
-        return `<a class="course-card course-card-link" href="${escHtml(c.course_link)}" target="_blank" rel="noopener" onclick="window.open(this.href, '_blank'); return false;" style="--course-color:${c.color}">${cardContent}</a>`;
-      }
-      return `<div class="course-card" style="--course-color:${c.color}">${cardContent}</div>`;
-    }).join('');
+    return;
+  }
+  try {
+    await ensureCoursesLoaded();
+    renderCourses(state.courses);
   } catch (err) {
     el('coursesGrid').innerHTML = `<div class="empty-state"><div class="empty-title">Failed to load</div></div>`;
   }
 }
+
+function renderCourses(courses) {
+  if (courses.length === 0) {
+    el('coursesGrid').innerHTML = `<div class="empty-state"><span class="empty-icon">📚</span><div class="empty-title">No courses</div></div>`;
+    return;
+  }
+  el('coursesGrid').innerHTML = courses.map(c => {
+    const hasLink = c.course_link && c.course_link.trim() !== '';
+    const cardContent = `
+      <div class="course-abbr">${escHtml(c.short_name || c.code)}</div>
+      <div class="course-name">${escHtml(c.name)}</div>
+      <div class="course-meta">
+        <span class="course-tag">${c.credits} cr</span>
+        ${c.area ? `<span class="course-tag">${escHtml(c.area)}</span>` : ''}
+        <span class="course-tag">${escHtml(c.code)}</span>
+      </div>
+      ${c.faculty ? `<div class="course-faculty">👤 ${escHtml(c.faculty)}</div>` : ''}
+      ${hasLink ? `<div class="course-link-hint">View Course →</div>` : ''}`;
+    if (hasLink) {
+      return `<a class="course-card course-card-link" href="${escHtml(c.course_link)}" target="_blank" rel="noopener" onclick="window.open(this.href, '_blank'); return false;" style="--course-color:${c.color}">${cardContent}</a>`;
+    }
+    return `<div class="course-card" style="--course-color:${c.color}">${cardContent}</div>`;
+  }).join('');
+}
+
 
 // ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
 async function initNotifications() {
@@ -611,43 +661,50 @@ function scheduleLocalNotifications() {
     }
   }
 
-  // Check class notifications
+  // Check class notifications — use cached data if available
   if (notifyBefore) {
-    api(`/api/today`).then(data => {
-      data.sessions.forEach(s => {
-        if (s.is_special) return;
-        const st = SLOT_TIMES[s.slot];
-        if (!st) return;
-        const [sh, sm] = st.start.split(':').map(Number);
-        const classTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), sh, sm, 0);
-        const alertTime = new Date(classTime.getTime() - minsBefore * 60 * 1000);
-        const delay = alertTime - now;
-        if (delay > 0 && delay < 8 * 60 * 60 * 1000) {
-          setTimeout(() => {
-            new Notification('Class Starting Soon! 📚', {
-              body: `${s.subject_raw} starts in ${minsBefore} minutes`,
-              icon: '/static/icons/icon-192.png',
-              badge: '/static/icons/badge.png',
-              tag: `class-${s.id}`,
-              silent: false,
-            });
-          }, delay);
-        }
-      });
-    }).catch(() => {});
+    const todaySessions = getCachedSessions(todayStr);
+    if (todaySessions.length > 0) {
+      _scheduleClassNotifs(todaySessions, now, minsBefore);
+    } else {
+      api('/api/today').then(data => _scheduleClassNotifs(data.sessions, now, minsBefore)).catch(() => {});
+    }
   }
 
   // Re-check in 1 hour
   state.notifTimer = setTimeout(scheduleLocalNotifications, 60 * 60 * 1000);
 }
 
+function _scheduleClassNotifs(sessions, now, minsBefore) {
+  sessions.forEach(s => {
+    if (s.is_special) return;
+    const st = SLOT_TIMES[s.slot];
+    if (!st) return;
+    const [sh, sm] = st.start.split(':').map(Number);
+    const classTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), sh, sm, 0);
+    const alertTime = new Date(classTime.getTime() - minsBefore * 60 * 1000);
+    const delay = alertTime - now;
+    if (delay > 0 && delay < 8 * 60 * 60 * 1000) {
+      setTimeout(() => {
+        new Notification('Class Starting Soon! 📚', {
+          body: `${s.subject_raw} starts in ${minsBefore} minutes`,
+          icon: '/static/icons/icon-192.png',
+          badge: '/static/icons/badge.png',
+          tag: `class-${s.id}`,
+          silent: false,
+        });
+      }, delay);
+    }
+  });
+}
+
 async function sendMorningSummary(dateStr) {
   try {
-    const data = await api('/api/today');
-    const count = data.sessions.filter(s => !s.is_special).length;
+    const sessions = getCachedSessions(dateStr);
+    const count = sessions.filter(s => !s.is_special).length;
     new Notification('Good Morning! 🌅', {
       body: count > 0
-        ? `You have ${count} class${count > 1 ? 'es' : ''} today. First: ${data.sessions[0]?.subject_raw}`
+        ? `You have ${count} class${count > 1 ? 'es' : ''} today. First: ${sessions[0]?.subject_raw}`
         : 'No classes today! Enjoy your day. 🎉',
       icon: '/static/icons/icon-192.png',
       tag: 'morning-summary',
@@ -655,15 +712,23 @@ async function sendMorningSummary(dateStr) {
   } catch (e) { }
 }
 
-// ─── INIT ────────────────────────────────────────────────────────────────────
+// ─── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   updateDateBadge();
+
+  // Kick off background prefetch immediately so views are instant when visited
+  ensureSessionsLoaded().catch(() => {});
+  ensureCoursesLoaded().catch(() => {});
+
   showView('today');
 
-  // Auto-refresh today view every 5 minutes
+  // Auto-refresh today view every 5 minutes (reads from cache if fresh)
   setInterval(() => {
     if (state.currentView === 'today') loadToday();
   }, 5 * 60 * 1000);
+
+  // Silently refresh session cache every 5 minutes in the background
+  setInterval(refreshSessionsInBackground, SESSIONS_TTL_MS);
 
   // Update date badge every minute
   setInterval(updateDateBadge, 60 * 1000);
