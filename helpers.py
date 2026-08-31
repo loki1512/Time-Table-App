@@ -12,6 +12,16 @@ from datetime import datetime
 from extensions import db
 from models import Course, ClassSession, TimeSlot, User
 
+# ─── Last-sync timestamp (in-process, resets on server restart) ───────────────
+_last_sync_time: datetime | None = None
+
+def get_last_sync_time() -> datetime | None:
+    return _last_sync_time
+
+def _mark_synced():
+    global _last_sync_time
+    _last_sync_time = datetime.utcnow()
+
 # ─── Constants ────────────────────────────────────────────────────────────────
 
 DEFAULT_SLOTS = [
@@ -180,6 +190,7 @@ def import_excel(source):
             db.session.add(session_obj)
 
     db.session.commit()
+    _mark_synced()
 
 
 # ─── Google Sheets Sync & Scheduler ───────────────────────────────────────────
@@ -222,7 +233,7 @@ def sync_from_google_sheet(sync_url=None):
                 return False, "Invalid response from Google Sheets proxy. Verify the script URL and permissions."
 
         stream = io.BytesIO(file_bytes)
-        import_excel(stream)
+        import_excel(stream)  # import_excel calls _mark_synced internally
         return True, "Timetable successfully synced from Google Sheet!"
     except Exception as e:
         return False, f"Failed to sync: {str(e)}"

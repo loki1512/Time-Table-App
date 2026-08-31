@@ -109,6 +109,15 @@ def health():
     return jsonify({'status': 'ok', 'database': 'connected'})
 
 
+@main_bp.route('/api/last-sync')
+@login_required
+def api_last_sync():
+    """Return the UTC timestamp of the most recent timetable import."""
+    from helpers import get_last_sync_time
+    ts = get_last_sync_time()
+    return jsonify({'last_sync': ts.isoformat() + 'Z' if ts else None})
+
+
 @main_bp.route('/api/cron/sync', methods=['GET', 'POST'])
 def cron_sync():
     """Triggered by scheduled morning cron or Google Apps Script timer."""

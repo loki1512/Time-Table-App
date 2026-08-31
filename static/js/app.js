@@ -730,6 +730,40 @@ document.addEventListener('DOMContentLoaded', () => {
   // Silently refresh session cache every 5 minutes in the background
   setInterval(refreshSessionsInBackground, SESSIONS_TTL_MS);
 
+  // Watch for timetable syncs — invalidate cache within ~1 min of any sync
+  watchForTimetableSync();
+
   // Update date badge every minute
   setInterval(updateDateBadge, 60 * 1000);
 });
+
+// ─── SYNC WATCH ───────────────────────────────────────────────────────────────
+/**
+ * Poll /api/last-sync every 60 s.
+ * If the server's sync timestamp is newer than when we last loaded our cache,
+ * force-refresh so students see the updated timetable within ~1 minute of any
+ * admin upload or automated cron sync.
+ */
+async function watchForTimetableSync() {
+  const POLL_MS = 60 * 1000;
+
+  async function check() {
+    try {
+      const { last_sync } = await api('/api/last-sync');
+      if (!last_sync) return; // no sync yet since server start
+      const serverSyncMs = new Date(last_sync).getTime();
+      if (state.sessionsCachedAt && serverSyncMs > state.sessionsCachedAt) {
+        console.log('[Sync Watch] Timetable updated on server — refreshing...');
+        await ensureSessionsLoaded({ forceRefresh: true });
+        const v = state.currentView;
+        if (v === 'today')    loadToday();
+        if (v === 'week')     loadWeek();
+        if (v === 'calendar') _paintCalendar(new Date());
+        showToast('Timetable updated!', 'success');
+      }
+    } catch (e) { /* network errors are non-fatal */ }
+  }
+
+  // Wait 30 s for initial load to complete, then check every minute
+  setTimeout(() => { check(); setInterval(check, POLL_MS); }, 30 * 1000);
+}
