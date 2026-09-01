@@ -775,15 +775,24 @@ async function openProfile() {
     el('profileAvatar').textContent = me.username[0].toUpperCase();
     el('profileName').textContent = me.username;
     el('profileRole').textContent = me.is_super_admin ? '★ Super Admin' : me.is_admin ? 'Administrator' : 'Student';
-    el('profileUsername').value = me.username;
     el('profileEmail').value = me.email;
-    // Super-admin cannot change their username
-    el('profileUsername').readOnly = me.is_super_admin;
-    el('profileUsername').title = me.is_super_admin ? "Super-admin username cannot be changed" : '';
+
+    const usernameGroup = el('profileUsernameGroup');
+    const usernameLockedGroup = el('profileUsernameLockedGroup');
+    if (me.is_super_admin) {
+      // Hide the editable username field — super admin name is permanently 'admin'
+      if (usernameGroup) usernameGroup.style.display = 'none';
+      if (usernameLockedGroup) usernameLockedGroup.style.display = '';
+    } else {
+      if (usernameGroup) usernameGroup.style.display = '';
+      if (usernameLockedGroup) usernameLockedGroup.style.display = 'none';
+      el('profileUsername').value = me.username;
+    }
+
     el('profileCurrentPwd').value = '';
     el('profileNewPwd').value = '';
     el('profileConfirmPwd').value = '';
-  } catch (e) { /* pre-fill from window.CURRENT_USER if API fails */ }
+  } catch (e) { /* silently ignore if profile fetch fails */ }
   el('profileOverlay').classList.add('show');
   el('profileDrawer').classList.add('open');
   closeSidebar();
@@ -798,12 +807,15 @@ async function saveProfile() {
   const btn = el('profileSaveBtn');
   btn.disabled = true;
   try {
+    const payload = { email: el('profileEmail').value.trim() };
+    // Only send username if the field is visible (non-super-admin)
+    const usernameGroup = el('profileUsernameGroup');
+    if (!usernameGroup || usernameGroup.style.display !== 'none') {
+      payload.username = el('profileUsername').value.trim();
+    }
     const updated = await api('/api/profile', {
       method: 'PUT',
-      body: JSON.stringify({
-        username: el('profileUsername').value.trim(),
-        email: el('profileEmail').value.trim(),
-      }),
+      body: JSON.stringify(payload),
     });
     // Reflect new username in sidebar
     el('profileAvatar').textContent = updated.username[0].toUpperCase();

@@ -172,9 +172,9 @@ def update_profile():
         new_name = data['username'].strip()
         if not new_name:
             return jsonify({'error': 'Username cannot be empty'}), 400
-        # Protect the super-admin's username
-        if current_user.is_super_admin and new_name != 'admin':
-            return jsonify({'error': "The 'admin' username cannot be changed"}), 403
+        # Super-admin's username is permanently locked to 'admin'
+        if current_user.is_super_admin:
+            return jsonify({'error': "The super-admin username cannot be changed"}), 403
         clash = User.query.filter_by(username=new_name).first()
         if clash and clash.id != current_user.id:
             return jsonify({'error': 'Username already taken'}), 409
