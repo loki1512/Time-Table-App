@@ -415,13 +415,21 @@ function renderUsersTable(users) {
         ? `<span class="role-badge role-admin">Admin</span>`
         : `<span class="role-badge role-user">Student</span>`;
 
-    // Role toggle: only super-admin can do this, and cannot demote super-admin
-    const canToggleRole = _isSuperAdmin && !u.is_super_admin;
-    const roleToggle = canToggleRole
-      ? `<button class="action-btn ${u.is_admin ? 'delete' : 'edit'}" title="${u.is_admin ? 'Remove admin' : 'Make admin'}" onclick="toggleAdminRole(${u.id}, ${!u.is_admin}, '${escHtml(u.username)}')">
+    // Role toggle: Any admin can promote a student. Only super-admin can remove admin role.
+    let roleToggle = '';
+    if (!u.is_super_admin) {
+      if (!u.is_admin) {
+        // Student -> Any admin can promote
+        roleToggle = `<button class="action-btn edit" title="Make admin" onclick="toggleAdminRole(${u.id}, true, '${escHtml(u.username)}')">
            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-         </button>`
-      : '';
+         </button>`;
+      } else if (_isSuperAdmin) {
+        // Admin -> Only super admin can demote
+        roleToggle = `<button class="action-btn delete" title="Remove admin" onclick="toggleAdminRole(${u.id}, false, '${escHtml(u.username)}')">
+           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+         </button>`;
+      }
+    }
 
     const editBtn = `<button class="action-btn edit" title="Edit user" onclick='openUserModal(${JSON.stringify(u)})'>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -476,16 +484,29 @@ function openUserModal(user) {
   // Password field: required for create, hidden for edit
   el('userModalPasswordGroup').style.display = _editingUserId ? 'none' : '';
 
-  // Role toggle: only super-admin can change roles; hide for super-admin targets
-  const isSuperAdminTarget = user?.is_super_admin;
-  const roleRow = el('userModalRoleRow');
+  // Role toggle permissions:
+  // - New user: any admin can create an admin
+  // - Existing student: any admin can promote to admin
+  // - Existing admin: only super admin can demote
   const superNote = el('userModalSuperAdminNote');
-  if (_isSuperAdmin && !isSuperAdminTarget) {
+  if (!_editingUserId || !user?.is_admin) {
+    el('userModalIsAdmin').disabled = false;
+    if (superNote) superNote.style.display = 'none';
+  } else if (isSuperAdminTarget) {
+    el('userModalIsAdmin').disabled = true;
+    if (superNote) {
+      superNote.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Super Admin role cannot be changed';
+      superNote.style.display = 'flex';
+    }
+  } else if (_isSuperAdmin) {
     el('userModalIsAdmin').disabled = false;
     if (superNote) superNote.style.display = 'none';
   } else {
     el('userModalIsAdmin').disabled = true;
-    if (superNote) superNote.style.display = 'flex';
+    if (superNote) {
+      superNote.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Only Super Admin can remove Admin role';
+      superNote.style.display = 'flex';
+    }
   }
 
   el('userModalOverlay').classList.add('show');

@@ -386,10 +386,6 @@ def create_user():
     if User.query.filter_by(email=email).first():
         return jsonify({'error': 'Email already registered'}), 409
 
-    # Only super-admin can create admin accounts
-    if make_admin and not current_user.is_super_admin:
-        return jsonify({'error': 'Only the super-admin can create admin accounts'}), 403
-
     user = User(username=username, email=email, is_admin=make_admin)
     user.set_password(password)
     db.session.add(user)
@@ -400,7 +396,7 @@ def create_user():
 @admin_bp.route('/api/admin/users/<int:user_id>', methods=['PUT'])
 @login_required
 def update_user(user_id):
-    """Edit username, email, is_admin. Role changes are super-admin only."""
+    """Edit username, email, is_admin. Role removal is super-admin only."""
     err = _require_admin()
     if err:
         return err
@@ -409,14 +405,16 @@ def update_user(user_id):
         return jsonify({'error': 'User not found'}), 404
     data = request.get_json() or {}
 
-    # Role changes: only super-admin is allowed
+    # Role changes: any admin can grant admin role, but only super-admin can remove it
     if 'is_admin' in data:
-        if not current_user.is_super_admin:
-            return jsonify({'error': 'Only the super-admin can change admin roles'}), 403
-        # Prevent super-admin from demoting themselves
-        if user.is_super_admin and not data['is_admin']:
-            return jsonify({'error': 'The super-admin account cannot be demoted'}), 403
-        user.is_admin = bool(data['is_admin'])
+        target_admin = bool(data['is_admin'])
+        if user.is_admin and not target_admin:
+            # Demoting an existing admin -> requires super-admin
+            if not current_user.is_super_admin:
+                return jsonify({'error': 'Only the super-admin can remove admin rights'}), 403
+            if user.is_super_admin:
+                return jsonify({'error': 'The super-admin account cannot be demoted'}), 403
+        user.is_admin = target_admin
 
     if 'username' in data:
         new_name = data['username'].strip()
