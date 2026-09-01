@@ -465,10 +465,12 @@ def admin_change_password(user_id):
 @admin_bp.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
 @login_required
 def delete_user(user_id):
-    """Delete a user. Cannot delete yourself or the super-admin."""
+    """Delete a user. Only super-admin can delete users. Cannot delete yourself or the super-admin."""
     err = _require_admin()
     if err:
         return err
+    if not current_user.is_super_admin:
+        return jsonify({'error': 'Only the super-admin can delete users'}), 403
     if user_id == current_user.id:
         return jsonify({'error': 'You cannot delete your own account'}), 403
     user = db.session.get(User, user_id)

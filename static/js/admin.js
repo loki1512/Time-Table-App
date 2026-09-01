@@ -348,7 +348,35 @@ async function saveCourse() {
     color: el('courseColor').value,
     course_link: el('courseLinkUrl').value.trim() || '',
   };
-  try { // ─── USERS ────────────────────────────────────────────────────────────────────
+  try {
+    if (editingCourseId) {
+      await api(`/api/courses/${editingCourseId}`, { method: 'PUT', body: JSON.stringify(data) });
+      showToast('Course updated', 'success');
+    } else {
+      await api('/api/courses', { method: 'POST', body: JSON.stringify(data) });
+      showToast('Course created', 'success');
+    }
+    closeCourseModal();
+    loadAdminCourses();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function deleteCourse(id) {
+  if (!confirm('Delete this course? Sessions using it will lose the course link.')) return;
+  try {
+    await api(`/api/courses/${id}`, { method: 'DELETE' });
+    showToast('Course deleted', 'success');
+    loadAdminCourses();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ─── USERS ────────────────────────────────────────────────────────────────────
 let _usersData = [];   // cache for search filtering
 let _isSuperAdmin = false;
 let _editingUserId = null;
@@ -561,70 +589,8 @@ function togglePwd(inputId, btn) {
     ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
     : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
 }
-    if (editingCourseId) {
-      await api(`/api/courses/${editingCourseId}`, { method: 'PUT', body: JSON.stringify(data) });
-      showToast('Course updated', 'success');
-    } else {
-      await api('/api/courses', { method: 'POST', body: JSON.stringify(data) });
-      showToast('Course created', 'success');
-    }
-    closeCourseModal();
-    loadAdminCourses();
-  } catch (err) {
-    showToast(err.message, 'error');
-  } finally {
-    btn.disabled = false;
-  }
-}
 
-async function deleteCourse(id) {
-  if (!confirm('Delete this course? Sessions using it will lose the course link.')) return;
-  try {
-    await api(`/api/courses/${id}`, { method: 'DELETE' });
-    showToast('Course deleted', 'success');
-    loadAdminCourses();
-  } catch (err) {
-    showToast(err.message, 'error');
-  }
-}
-
-// â”€â”€â”€ USERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-async function loadAdminUsers() {
-  try {
-    const users = await api('/api/admin/users');
-    el('usersTableBody').innerHTML = users.map(u => `
-      <tr>
-        <td><strong>${escHtml(u.username)}</strong></td>
-        <td style="color:var(--text-2)">${escHtml(u.email)}</td>
-        <td>
-          <span class="role-badge ${u.is_admin ? 'role-admin' : 'role-user'}">
-            ${u.is_admin ? 'Admin' : 'Student'}
-          </span>
-        </td>
-        <td style="color:var(--text-2);font-size:12px">${new Date(u.created_at).toLocaleDateString('en-IN')}</td>
-        <td>
-          <button class="action-btn edit" title="${u.is_admin ? 'Remove admin' : 'Make admin'}" onclick="toggleAdmin(${u.id}, ${!u.is_admin})">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-          </button>
-        </td>
-      </tr>`).join('');
-  } catch (err) {
-    el('usersTableBody').innerHTML = `<tr><td colspan="5" class="loading-text">Error: ${err.message}</td></tr>`;
-  }
-}
-
-async function toggleAdmin(id, makeAdmin) {
-  if (!confirm(`${makeAdmin ? 'Grant admin rights to' : 'Remove admin rights from'} this user?`)) return;
-  try {
-    await api(`/api/admin/users/${id}`, { method: 'PUT', body: JSON.stringify({ is_admin: makeAdmin }) });
-    showToast(`User updated`, 'success');
-    loadAdminUsers();
-  } catch (err) {
-    showToast(err.message, 'error');
-  }
-}
-
-// â”€â”€â”€ IMPORT EXCEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── IMPORT EXCEL ─────────────────────────────────────────────────────────────
 async function loadExcelFiles() {
   const select = el('excelFileSelect');
   if (select) {
