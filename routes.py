@@ -52,6 +52,15 @@ def logout():
 
 @main_bp.route('/register', methods=['GET', 'POST'])
 def register():
+    # Public self-registration is currently disabled (admin-only user provisioning)
+    ALLOW_PUBLIC_REGISTRATION = False
+
+    if not ALLOW_PUBLIC_REGISTRATION:
+        if request.is_json:
+            return jsonify({'success': False, 'error': 'Public registration is disabled. Please contact an administrator.'}), 403
+        flash('Public registration is disabled. Please contact an administrator.', 'error')
+        return redirect(url_for('main.login'))
+
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     if request.method == 'POST':
