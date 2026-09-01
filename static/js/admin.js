@@ -348,7 +348,219 @@ async function saveCourse() {
     color: el('courseColor').value,
     course_link: el('courseLinkUrl').value.trim() || '',
   };
+  try { // ─── USERS ────────────────────────────────────────────────────────────────────
+let _usersData = [];   // cache for search filtering
+let _isSuperAdmin = false;
+let _editingUserId = null;
+
+async function loadAdminUsers() {
   try {
+    const [users, me] = await Promise.all([
+      api('/api/admin/users'),
+      api('/api/me'),
+    ]);
+    _usersData = users;
+    _isSuperAdmin = me.is_super_admin || false;
+    renderUsersTable(users);
+  } catch (err) {
+    el('usersTableBody').innerHTML = `<tr><td colspan="5" class="loading-text">Error: ${err.message}</td></tr>`;
+  }
+}
+
+function filterUsersTable() {
+  const q = (el('usersSearch')?.value || '').toLowerCase();
+  const filtered = q
+    ? _usersData.filter(u => u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+    : _usersData;
+  renderUsersTable(filtered);
+}
+
+function renderUsersTable(users) {
+  if (users.length === 0) {
+    el('usersTableBody').innerHTML = '<tr><td colspan="5" class="loading-text">No users found.</td></tr>';
+    return;
+  }
+  el('usersTableBody').innerHTML = users.map(u => {
+    const superBadge = u.is_super_admin
+      ? `<span class="role-badge role-super" title="Super Admin — cannot be demoted">★ Super</span>`
+      : u.is_admin
+        ? `<span class="role-badge role-admin">Admin</span>`
+        : `<span class="role-badge role-user">Student</span>`;
+
+    // Role toggle: only super-admin can do this, and cannot demote super-admin
+    const canToggleRole = _isSuperAdmin && !u.is_super_admin;
+    const roleToggle = canToggleRole
+      ? `<button class="action-btn ${u.is_admin ? 'delete' : 'edit'}" title="${u.is_admin ? 'Remove admin' : 'Make admin'}" onclick="toggleAdminRole(${u.id}, ${!u.is_admin}, '${escHtml(u.username)}')">
+           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+         </button>`
+      : '';
+
+    const editBtn = `<button class="action-btn edit" title="Edit user" onclick='openUserModal(${JSON.stringify(u)})'>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>`;
+
+    const pwdBtn = `<button class="action-btn" title="Change password" onclick="openChpwdModal(${u.id}, '${escHtml(u.username)}')" style="color:var(--accent-2)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </button>`;
+
+    // Cannot delete super-admin or yourself (we'll guard on backend too)
+    const delBtn = u.is_super_admin ? '' : `<button class="action-btn delete" title="Delete user" onclick="deleteUser(${u.id}, '${escHtml(u.username)}')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </button>`;
+
+    return `<tr data-user-id="${u.id}">
+      <td>
+        <div class="user-cell">
+          <div class="user-cell-avatar">${u.username[0].toUpperCase()}</div>
+          <strong>${escHtml(u.username)}</strong>
+        </div>
+      </td>
+      <td style="color:var(--text-2);font-size:13px">${escHtml(u.email)}</td>
+      <td>${superBadge}</td>
+      <td style="color:var(--text-2);font-size:12px">${new Date(u.created_at).toLocaleDateString('en-IN')}</td>
+      <td><div class="asi-actions">${roleToggle}${editBtn}${pwdBtn}${delBtn}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Role toggle (super-admin only) ─────────────────────────────────────────
+async function toggleAdminRole(id, makeAdmin, username) {
+  const action = makeAdmin ? 'grant Admin rights to' : 'remove Admin rights from';
+  if (!confirm(`Are you sure you want to ${action} "${username}"?`)) return;
+  try {
+    await api(`/api/admin/users/${id}`, { method: 'PUT', body: JSON.stringify({ is_admin: makeAdmin }) });
+    showToast(`Role updated for ${username}`, 'success');
+    loadAdminUsers();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+// ── User create/edit modal ──────────────────────────────────────────────────
+function openUserModal(user) {
+  _editingUserId = user?.id || null;
+  el('userModalId').value = _editingUserId || '';
+  el('userModalTitle').textContent = _editingUserId ? 'Edit User' : 'Add User';
+  el('userModalSaveBtn').textContent = _editingUserId ? 'Save Changes' : 'Create User';
+  el('userModalUsername').value = user?.username || '';
+  el('userModalEmail').value = user?.email || '';
+  el('userModalPassword').value = '';
+  el('userModalIsAdmin').checked = user?.is_admin || false;
+
+  // Password field: required for create, hidden for edit
+  el('userModalPasswordGroup').style.display = _editingUserId ? 'none' : '';
+
+  // Role toggle: only super-admin can change roles; hide for super-admin targets
+  const isSuperAdminTarget = user?.is_super_admin;
+  const roleRow = el('userModalRoleRow');
+  const superNote = el('userModalSuperAdminNote');
+  if (_isSuperAdmin && !isSuperAdminTarget) {
+    el('userModalIsAdmin').disabled = false;
+    if (superNote) superNote.style.display = 'none';
+  } else {
+    el('userModalIsAdmin').disabled = true;
+    if (superNote) superNote.style.display = 'flex';
+  }
+
+  el('userModalOverlay').classList.add('show');
+  setTimeout(() => el('userModalUsername').focus(), 50);
+}
+
+function closeUserModal() { el('userModalOverlay').classList.remove('show'); }
+
+async function saveUser() {
+  const btn = el('userModalSaveBtn');
+  btn.disabled = true;
+
+  const data = {
+    username: el('userModalUsername').value.trim(),
+    email: el('userModalEmail').value.trim(),
+    is_admin: el('userModalIsAdmin').checked,
+  };
+
+  if (!_editingUserId) {
+    // Create — password required
+    const pw = el('userModalPassword').value;
+    if (!pw || pw.length < 6) {
+      showToast('Password must be at least 6 characters', 'error');
+      btn.disabled = false;
+      return;
+    }
+    data.password = pw;
+  }
+
+  if (!data.username || !data.email) {
+    showToast('Username and email are required', 'error');
+    btn.disabled = false;
+    return;
+  }
+
+  try {
+    if (_editingUserId) {
+      await api(`/api/admin/users/${_editingUserId}`, { method: 'PUT', body: JSON.stringify(data) });
+      showToast('User updated', 'success');
+    } else {
+      await api('/api/admin/users', { method: 'POST', body: JSON.stringify(data) });
+      showToast('User created', 'success');
+    }
+    closeUserModal();
+    loadAdminUsers();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Admin change-password modal ─────────────────────────────────────────────
+function openChpwdModal(userId, username) {
+  el('chpwdUserId').value = userId;
+  el('chpwdModalTitle').textContent = `Change Password`;
+  el('chpwdModalDesc').textContent = `Set a new password for "${username}". They will need to use the new password on their next login.`;
+  el('chpwdNew').value = '';
+  el('chpwdConfirm').value = '';
+  el('chpwdModalOverlay').classList.add('show');
+  setTimeout(() => el('chpwdNew').focus(), 50);
+}
+
+function closeChpwdModal() { el('chpwdModalOverlay').classList.remove('show'); }
+
+async function adminChangePassword() {
+  const userId = el('chpwdUserId').value;
+  const pw = el('chpwdNew').value;
+  const confirm2 = el('chpwdConfirm').value;
+  if (!pw || pw.length < 6) { showToast('Password must be at least 6 characters', 'error'); return; }
+  if (pw !== confirm2) { showToast('Passwords do not match', 'error'); return; }
+  const btn = el('chpwdSaveBtn');
+  btn.disabled = true;
+  try {
+    await api(`/api/admin/users/${userId}/password`, { method: 'PUT', body: JSON.stringify({ password: pw }) });
+    showToast('Password updated', 'success');
+    closeChpwdModal();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Delete user ─────────────────────────────────────────────────────────────
+async function deleteUser(userId, username) {
+  if (!confirm(`Delete "${username}" permanently? This cannot be undone.`)) return;
+  try {
+    await api(`/api/admin/users/${userId}`, { method: 'DELETE' });
+    showToast(`${username} deleted`, 'success');
+    loadAdminUsers();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+// ── Shared password visibility toggle ───────────────────────────────────────
+function togglePwd(inputId, btn) {
+  const inp = el(inputId);
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.innerHTML = show
+    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+}
     if (editingCourseId) {
       await api(`/api/courses/${editingCourseId}`, { method: 'PUT', body: JSON.stringify(data) });
       showToast('Course updated', 'success');

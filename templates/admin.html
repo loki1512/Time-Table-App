@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/css/style.css?v=2.2" />
-  <link rel="stylesheet" href="/static/css/admin.css?v=2.2" />
+  <link rel="stylesheet" href="/static/css/style.css?v=3.0" />
+  <link rel="stylesheet" href="/static/css/admin.css?v=3.0" />
 </head>
 <body>
   <div class="app-shell" id="app">
@@ -126,11 +126,21 @@
 
         <!-- USERS VIEW -->
         <section class="view" id="adminViewUsers">
+          <div class="users-toolbar">
+            <div class="users-search-wrap">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" id="usersSearch" class="users-search" placeholder="Search users…" oninput="filterUsersTable()" />
+            </div>
+            <button class="btn-primary btn-sm" id="addUserBtn" onclick="openUserModal()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add User
+            </button>
+          </div>
           <div class="admin-table-wrap">
             <table class="admin-table" id="usersTable">
               <thead>
                 <tr>
-                  <th>Username</th>
+                  <th>User</th>
                   <th>Email</th>
                   <th>Role</th>
                   <th>Joined</th>
@@ -138,7 +148,7 @@
                 </tr>
               </thead>
               <tbody id="usersTableBody">
-                <tr><td colspan="5" class="loading-text">Loading users...</td></tr>
+                <tr><td colspan="5" class="loading-text">Loading users…</td></tr>
               </tbody>
             </table>
           </div>
@@ -459,7 +469,96 @@
   <!-- Toast -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/static/js/admin.js?v=2.4"></script>
+  <!-- USER MODAL (create / edit) -->
+  <div class="modal-overlay" id="userModalOverlay">
+    <div class="modal" id="userModal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="userModalTitle">Add User</h3>
+        <button class="modal-close" onclick="closeUserModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="userModalId" />
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" id="userModalUsername" class="form-input" placeholder="john_doe" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" id="userModalEmail" class="form-input" placeholder="john@example.com" autocomplete="off" />
+          </div>
+        </div>
+        <div class="form-group" id="userModalPasswordGroup">
+          <label class="form-label">Password <span style="color:var(--text-3);font-weight:400;font-size:12px">(min 6 characters)</span></label>
+          <div class="password-input-wrap">
+            <input type="password" id="userModalPassword" class="form-input" placeholder="Set a password" autocomplete="new-password" />
+            <button type="button" class="pwd-toggle" onclick="togglePwd('userModalPassword', this)" tabindex="-1">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="form-group" id="userModalRoleGroup">
+          <label class="form-label">Role</label>
+          <div class="role-toggle-row" id="userModalRoleRow">
+            <label class="checkbox-row">
+              <input type="checkbox" id="userModalIsAdmin" />
+              <span>Make this user an Admin</span>
+            </label>
+            <div class="super-admin-note" id="userModalSuperAdminNote" style="display:none">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              Only super-admin can change roles
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeUserModal()">Cancel</button>
+        <button class="btn-primary" id="userModalSaveBtn" onclick="saveUser()">Create User</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANGE PASSWORD MODAL (admin changes any user's password) -->
+  <div class="modal-overlay" id="chpwdModalOverlay">
+    <div class="modal" id="chpwdModal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="chpwdModalTitle">Change Password</h3>
+        <button class="modal-close" onclick="closeChpwdModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="chpwdUserId" />
+        <p id="chpwdModalDesc" style="font-size:13px;color:var(--text-2);margin-bottom:16px"></p>
+        <div class="form-group">
+          <label class="form-label">New Password <span style="color:var(--text-3);font-weight:400;font-size:12px">(min 6 characters)</span></label>
+          <div class="password-input-wrap">
+            <input type="password" id="chpwdNew" class="form-input" placeholder="New password" autocomplete="new-password" />
+            <button type="button" class="pwd-toggle" onclick="togglePwd('chpwdNew', this)" tabindex="-1">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          <div class="password-input-wrap">
+            <input type="password" id="chpwdConfirm" class="form-input" placeholder="Confirm password" autocomplete="new-password" />
+            <button type="button" class="pwd-toggle" onclick="togglePwd('chpwdConfirm', this)" tabindex="-1">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeChpwdModal()">Cancel</button>
+        <button class="btn-primary" id="chpwdSaveBtn" onclick="adminChangePassword()">Set Password</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/admin.js?v=3.0"></script>
 </body>
 </html>
 

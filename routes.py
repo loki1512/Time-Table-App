@@ -154,12 +154,59 @@ def service_worker():
 @main_bp.route('/api/me')
 @login_required
 def api_me():
-    return jsonify({
-        'id': current_user.id,
-        'username': current_user.username,
-        'email': current_user.email,
-        'is_admin': current_user.is_admin,
-    })
+    return jsonify(current_user.to_dict())
+
+
+@main_bp.route('/api/profile', methods=['GET'])
+@login_required
+def get_profile():
+    return jsonify(current_user.to_dict())
+
+
+@main_bp.route('/api/profile', methods=['PUT'])
+@login_required
+def update_profile():
+    """User updates their own username/email."""
+    data = request.get_json() or {}
+    if 'username' in data:
+        new_name = data['username'].strip()
+        if not new_name:
+            return jsonify({'error': 'Username cannot be empty'}), 400
+        # Protect the super-admin's username
+        if current_user.is_super_admin and new_name != 'admin':
+            return jsonify({'error': "The 'admin' username cannot be changed"}), 403
+        clash = User.query.filter_by(username=new_name).first()
+        if clash and clash.id != current_user.id:
+            return jsonify({'error': 'Username already taken'}), 409
+        current_user.username = new_name
+
+    if 'email' in data:
+        new_email = data['email'].strip()
+        if not new_email:
+            return jsonify({'error': 'Email cannot be empty'}), 400
+        clash = User.query.filter_by(email=new_email).first()
+        if clash and clash.id != current_user.id:
+            return jsonify({'error': 'Email already registered'}), 409
+        current_user.email = new_email
+
+    db.session.commit()
+    return jsonify(current_user.to_dict())
+
+
+@main_bp.route('/api/profile/password', methods=['PUT'])
+@login_required
+def change_own_password():
+    """User changes their own password — current password verification required."""
+    data = request.get_json() or {}
+    current_pw = data.get('current_password', '')
+    new_pw = data.get('new_password', '')
+    if not current_user.check_password(current_pw):
+        return jsonify({'error': 'Current password is incorrect'}), 403
+    if not new_pw or len(new_pw) < 6:
+        return jsonify({'error': 'New password must be at least 6 characters'}), 400
+    current_user.set_password(new_pw)
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 @main_bp.route('/api/today')

@@ -362,27 +362,123 @@ def admin_users():
     err = _require_admin()
     if err:
         return err
-    users = User.query.all()
-    return jsonify([{
-        'id': u.id,
-        'username': u.username,
-        'email': u.email,
-        'is_admin': u.is_admin,
-        'created_at': u.created_at.isoformat(),
-    } for u in users])
+    users = User.query.order_by(User.created_at).all()
+    return jsonify([u.to_dict() for u in users])
+
+
+@admin_bp.route('/api/admin/users', methods=['POST'])
+@login_required
+def create_user():
+    """Create a new user. Only super-admin can create admins."""
+    err = _require_admin()
+    if err:
+        return err
+    data = request.get_json() or {}
+    username = (data.get('username') or '').strip()
+    email = (data.get('email') or '').strip()
+    password = data.get('password', '')
+    make_admin = bool(data.get('is_admin', False))
+
+    if not username or not email or not password:
+        return jsonify({'error': 'Username, email and password are required'}), 400
+    if User.query.filter_by(username=username).first():
+        return jsonify({'error': 'Username already taken'}), 409
+    if User.query.filter_by(email=email).first():
+        return jsonify({'error': 'Email already registered'}), 409
+
+    # Only super-admin can create admin accounts
+    if make_admin and not current_user.is_super_admin:
+        return jsonify({'error': 'Only the super-admin can create admin accounts'}), 403
+
+    user = User(username=username, email=email, is_admin=make_admin)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+    return jsonify(user.to_dict()), 201
 
 
 @admin_bp.route('/api/admin/users/<int:user_id>', methods=['PUT'])
 @login_required
 def update_user(user_id):
+    """Edit username, email, is_admin. Role changes are super-admin only."""
     err = _require_admin()
     if err:
         return err
     user = db.session.get(User, user_id)
     if not user:
-        return jsonify({'error': 'Not found'}), 404
-    data = request.get_json()
+        return jsonify({'error': 'User not found'}), 404
+    data = request.get_json() or {}
+
+    # Role changes: only super-admin is allowed
     if 'is_admin' in data:
-        user.is_admin = data['is_admin']
+        if not current_user.is_super_admin:
+            return jsonify({'error': 'Only the super-admin can change admin roles'}), 403
+        # Prevent super-admin from demoting themselves
+        if user.is_super_admin and not data['is_admin']:
+            return jsonify({'error': 'The super-admin account cannot be demoted'}), 403
+        user.is_admin = bool(data['is_admin'])
+
+    if 'username' in data:
+        new_name = data['username'].strip()
+        if not new_name:
+            return jsonify({'error': 'Username cannot be empty'}), 400
+        clash = User.query.filter_by(username=new_name).first()
+        if clash and clash.id != user_id:
+            return jsonify({'error': 'Username already taken'}), 409
+        # Protect the super-admin username from being changed
+        if user.is_super_admin and new_name != 'admin':
+            return jsonify({'error': "The 'admin' username cannot be changed"}), 403
+        user.username = new_name
+
+    if 'email' in data:
+        new_email = data['email'].strip()
+        if not new_email:
+            return jsonify({'error': 'Email cannot be empty'}), 400
+        clash = User.query.filter_by(email=new_email).first()
+        if clash and clash.id != user_id:
+            return jsonify({'error': 'Email already registered'}), 409
+        user.email = new_email
+
+    db.session.commit()
+    return jsonify(user.to_dict())
+
+
+@admin_bp.route('/api/admin/users/<int:user_id>/password', methods=['PUT'])
+@login_required
+def admin_change_password(user_id):
+    """Admin changes any user's password. No current-password check needed."""
+    err = _require_admin()
+    if err:
+        return err
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    data = request.get_json() or {}
+    new_pw = data.get('password', '')
+    if not new_pw or len(new_pw) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters'}), 400
+    user.set_password(new_pw)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@admin_bp.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
+@login_required
+def delete_user(user_id):
+    """Delete a user. Cannot delete yourself or the super-admin."""
+    err = _require_admin()
+    if err:
+        return err
+    if user_id == current_user.id:
+        return jsonify({'error': 'You cannot delete your own account'}), 403
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    if user.is_super_admin:
+        return jsonify({'error': 'The super-admin account cannot be deleted'}), 403
+    # Clean up their notifications first
+    from models import Notification
+    Notification.query.filter_by(user_id=user_id).delete()
+    db.session.delete(user)
     db.session.commit()
     return jsonify({'success': True})

@@ -767,3 +767,87 @@ async function watchForTimetableSync() {
   // Wait 30 s for initial load to complete, then check every minute
   setTimeout(() => { check(); setInterval(check, POLL_MS); }, 30 * 1000);
 }
+
+// ─── PROFILE DRAWER ───────────────────────────────────────────────────────────
+async function openProfile() {
+  try {
+    const me = await api('/api/profile');
+    el('profileAvatar').textContent = me.username[0].toUpperCase();
+    el('profileName').textContent = me.username;
+    el('profileRole').textContent = me.is_super_admin ? '★ Super Admin' : me.is_admin ? 'Administrator' : 'Student';
+    el('profileUsername').value = me.username;
+    el('profileEmail').value = me.email;
+    // Super-admin cannot change their username
+    el('profileUsername').readOnly = me.is_super_admin;
+    el('profileUsername').title = me.is_super_admin ? "Super-admin username cannot be changed" : '';
+    el('profileCurrentPwd').value = '';
+    el('profileNewPwd').value = '';
+    el('profileConfirmPwd').value = '';
+  } catch (e) { /* pre-fill from window.CURRENT_USER if API fails */ }
+  el('profileOverlay').classList.add('show');
+  el('profileDrawer').classList.add('open');
+  closeSidebar();
+}
+
+function closeProfile() {
+  el('profileOverlay').classList.remove('show');
+  el('profileDrawer').classList.remove('open');
+}
+
+async function saveProfile() {
+  const btn = el('profileSaveBtn');
+  btn.disabled = true;
+  try {
+    const updated = await api('/api/profile', {
+      method: 'PUT',
+      body: JSON.stringify({
+        username: el('profileUsername').value.trim(),
+        email: el('profileEmail').value.trim(),
+      }),
+    });
+    // Reflect new username in sidebar
+    el('profileAvatar').textContent = updated.username[0].toUpperCase();
+    el('profileName').textContent = updated.username;
+    document.querySelector('.user-avatar')?.setAttribute('data-initial', updated.username[0].toUpperCase());
+    document.querySelector('.user-name')?.textContent && (document.querySelector('.user-name').textContent = updated.username);
+    showToast('Profile updated!', 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function changeOwnPassword() {
+  const currentPwd = el('profileCurrentPwd').value;
+  const newPwd = el('profileNewPwd').value;
+  const confirmPwd = el('profileConfirmPwd').value;
+  if (!currentPwd) { showToast('Enter your current password', 'error'); return; }
+  if (!newPwd || newPwd.length < 6) { showToast('New password must be at least 6 characters', 'error'); return; }
+  if (newPwd !== confirmPwd) { showToast('Passwords do not match', 'error'); return; }
+  const btn = el('profilePwdBtn');
+  btn.disabled = true;
+  try {
+    await api('/api/profile/password', {
+      method: 'PUT',
+      body: JSON.stringify({ current_password: currentPwd, new_password: newPwd }),
+    });
+    el('profileCurrentPwd').value = '';
+    el('profileNewPwd').value = '';
+    el('profileConfirmPwd').value = '';
+    showToast('Password updated!', 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function toggleProfilePwd(inputId, btn) {
+  const inp = el(inputId);
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.innerHTML = show
+    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+}

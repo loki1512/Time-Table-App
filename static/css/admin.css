@@ -616,4 +616,108 @@ a.acc-link-tag:hover {
   flex-shrink: 0;
 }
 
+/* ─── USERS VIEW ────────────────────────────────────────────────────────────── */
+.users-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
 
+.users-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  flex: 1;
+  min-width: 200px;
+  color: var(--text-2);
+}
+
+.users-search {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  width: 100%;
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-cell-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-3));
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.role-badge.role-super {
+  background: linear-gradient(135deg, rgba(201,162,39,0.2), rgba(201,162,39,0.1));
+  color: var(--accent-3);
+  border: 1px solid rgba(201,162,39,0.3);
+  font-weight: 700;
+}
+
+/* ─── PASSWORD INPUT ─────────────────────────────────────────────────────────── */
+.password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrap .form-input {
+  padding-right: 40px;
+  width: 100%;
+}
+
+.pwd-toggle {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.pwd-toggle:hover { color: var(--text); }
+
+/* ─── ROLE TOGGLE ROW ────────────────────────────────────────────────────────── */
+.role-toggle-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.super-admin-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--accent-3);
+  background: rgba(201,162,39,0.08);
+  border: 1px solid rgba(201,162,39,0.2);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+}

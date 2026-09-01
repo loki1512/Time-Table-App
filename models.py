@@ -34,6 +34,21 @@ class User(db.Model):
     def check_password(self, password):
         return bcrypt.check_password_hash(self.password_hash, password)
 
+    @property
+    def is_super_admin(self):
+        """Super-admin is identified purely by username 'admin'. No DB column needed."""
+        return self.username == 'admin'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'email': self.email,
+            'is_admin': self.is_admin,
+            'is_super_admin': self.is_super_admin,
+            'created_at': self.created_at.isoformat(),
+        }
+
 
 # ─── Course ───────────────────────────────────────────────────────────────────
 
