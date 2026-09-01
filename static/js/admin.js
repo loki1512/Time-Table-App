@@ -473,6 +473,8 @@ async function toggleAdminRole(id, makeAdmin, username) {
 // ── User create/edit modal ──────────────────────────────────────────────────
 function openUserModal(user) {
   _editingUserId = user?.id || null;
+  const isSuperAdminTarget = user?.is_super_admin || false;
+
   el('userModalId').value = _editingUserId || '';
   el('userModalTitle').textContent = _editingUserId ? 'Edit User' : 'Add User';
   el('userModalSaveBtn').textContent = _editingUserId ? 'Save Changes' : 'Create User';
@@ -481,13 +483,18 @@ function openUserModal(user) {
   el('userModalPassword').value = '';
   el('userModalIsAdmin').checked = user?.is_admin || false;
 
-  // Password field: required for create, hidden for edit
+  // Username: cannot change the super admin username 'admin', but all other admins and users are fully editable
+  el('userModalUsername').readOnly = isSuperAdminTarget;
+  el('userModalUsername').title = isSuperAdminTarget ? "Super Admin username cannot be changed" : "";
+
+  // Password field: required for create, hidden for edit (use separate Change Password button)
   el('userModalPasswordGroup').style.display = _editingUserId ? 'none' : '';
 
   // Role toggle permissions:
   // - New user: any admin can create an admin
   // - Existing student: any admin can promote to admin
-  // - Existing admin: only super admin can demote
+  // - Existing admin: Super Admin can toggle role on/off
+  // - Super Admin account: cannot be demoted
   const superNote = el('userModalSuperAdminNote');
   if (!_editingUserId || !user?.is_admin) {
     el('userModalIsAdmin').disabled = false;
@@ -510,7 +517,13 @@ function openUserModal(user) {
   }
 
   el('userModalOverlay').classList.add('show');
-  setTimeout(() => el('userModalUsername').focus(), 50);
+  setTimeout(() => {
+    if (!isSuperAdminTarget) {
+      el('userModalUsername').focus();
+    } else {
+      el('userModalEmail').focus();
+    }
+  }, 50);
 }
 
 function closeUserModal() { el('userModalOverlay').classList.remove('show'); }
