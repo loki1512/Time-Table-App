@@ -157,10 +157,28 @@ async function ensureSessionsLoaded({ forceRefresh = false } = {}) {
   await state.prefetchPromise;
 }
 
+/**
+ * Fire-and-forget prefetch. Runs entirely in background — never blocks a view.
+ * After the data lands, if Calendar is active re-paint it, so the user sees
+ * dots appear without having clicked away and back.
+ */
+function prefetchSessionsInBackground({ forceRefresh = false } = {}) {
+  const p = forceRefresh
+    ? ensureSessionsLoaded({ forceRefresh: true })
+    : ensureSessionsLoaded();
+
+  p.then(() => {
+    // If calendar is visible and was painted with stale/empty cache, repaint it
+    if (state.currentView === 'calendar') {
+      _paintCalendar(new Date());
+    }
+  }).catch(() => {});
+}
+
 function getCachedSessions(dateStr) { return state.allSessions[dateStr] || []; }
 
 function refreshSessionsInBackground() {
-  ensureSessionsLoaded({ forceRefresh: true }).catch(() => {});
+  prefetchSessionsInBackground({ forceRefresh: true });
 }
 
 async function ensureCoursesLoaded({ forceRefresh = false } = {}) {
@@ -180,17 +198,24 @@ async function loadToday() {
   el('todayWeekday').textContent = now.toLocaleDateString('en-IN', { weekday: 'long' });
   el('todayFullDate').textContent = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
+  // ── Strategy: render immediately from whatever is in cache; if cache is warm
+  //    we're done instantly. If cold, fall back to the fast /api/today endpoint
+  //    (returns only today's sessions — much smaller than the full-term fetch).
+  //    The big prefetch runs in the background and will warm the cache for all
+  //    other views without blocking this render.
+  const cached = getCachedSessions(state.today);
+  if (cached.length > 0 || state.sessionsCachedAt) {
+    // Cache has something (or was loaded before and today just has no classes)
+    renderTodaySessions(cached, now);
+    return;
+  }
+
+  // Cache is cold — hit the small, fast today endpoint directly
   try {
-    await ensureSessionsLoaded();
-    renderTodaySessions(getCachedSessions(state.today), now);
+    const data = await api('/api/today');
+    renderTodaySessions(data.sessions, now);
   } catch (err) {
-    // Fallback to direct API
-    try {
-      const data = await api('/api/today');
-      renderTodaySessions(data.sessions, now);
-    } catch (err2) {
-      el('todaySessions').innerHTML = `<div class="empty-state"><span class="empty-icon">⚠️</span><div class="empty-title">Failed to load</div><div class="empty-desc">${err2.message}</div></div>`;
-    }
+    el('todaySessions').innerHTML = `<div class="empty-state"><span class="empty-icon">⚠️</span><div class="empty-title">Failed to load</div><div class="empty-desc">${err.message}</div></div>`;
   }
 }
 
@@ -333,16 +358,22 @@ async function loadWeek() {
   mon.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1) + weekOffset * 7);
   const sun = addDays(mon, 6);
 
-  const startStr = fmt(mon);
-  const endStr = fmt(sun);
-
   el('weekLabel').textContent = `${fmtShort(mon)} – ${fmtShort(sun)}`;
 
+  // Render from cache immediately (even if partially warm)
+  const days = [];
+  for (let i = 0; i <= 6; i++) days.push(addDays(mon, i));
+
+  if (state.sessionsCachedAt) {
+    // Cache exists — paint instantly
+    const weekSessions = days.flatMap(d => state.allSessions[fmt(d)] || []);
+    renderWeek(weekSessions, mon, sun, today);
+    return;
+  }
+
+  // Cache is cold — wait for the background prefetch (already in flight from DOMContentLoaded)
   try {
     await ensureSessionsLoaded();
-    // Collect all sessions for this week from cache
-    const days = [];
-    for (let i = 0; i <= 6; i++) days.push(addDays(mon, i));
     const weekSessions = days.flatMap(d => state.allSessions[fmt(d)] || []);
     renderWeek(weekSessions, mon, sun, today);
   } catch (err) {
@@ -401,15 +432,52 @@ function changeWeek(dir) {
 }
 
 // ─── CALENDAR VIEW ─────────────────────────────────────────────────────────────────
-async function renderCalendar() {
+function renderCalendar() {
   const today = new Date();
   if (state.calYear === null) {
     state.calYear = today.getFullYear();
     state.calMonth = today.getMonth();
   }
-  // Ensure all sessions are in memory, then paint synchronously
-  await ensureSessionsLoaded();
+
+  // Paint immediately from whatever is in cache (may be empty dots if still loading)
   _paintCalendar(today);
+
+  // If the big prefetch hasn't completed yet, show a subtle loading indicator
+  // and re-paint the moment data arrives — no user action required
+  if (state.prefetchPromise) {
+    _showCalendarLoadingHint(true);
+    state.prefetchPromise.then(() => {
+      _showCalendarLoadingHint(false);
+      _paintCalendar(new Date());
+    }).catch(() => {
+      _showCalendarLoadingHint(false);
+    });
+  }
+}
+
+function _showCalendarLoadingHint(show) {
+  let hint = el('calLoadingHint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'calLoadingHint';
+    hint.style.cssText = [
+      'text-align:center',
+      'font-size:12px',
+      'color:var(--text-3, #888)',
+      'padding:6px 0 2px',
+      'display:flex',
+      'align-items:center',
+      'justify-content:center',
+      'gap:6px',
+      'transition:opacity 0.3s',
+    ].join(';');
+    hint.innerHTML = `<span class="cal-spinner"></span><span>Loading calendar…</span>`;
+    // Insert before the grid
+    const grid = el('calendarGrid');
+    grid?.parentNode?.insertBefore(hint, grid);
+  }
+  hint.style.opacity = show ? '1' : '0';
+  setTimeout(() => { if (!show && hint) hint.remove(); }, show ? 0 : 350);
 }
 
 function _paintCalendar(today) {
@@ -716,11 +784,19 @@ async function sendMorningSummary(dateStr) {
 document.addEventListener('DOMContentLoaded', () => {
   updateDateBadge();
 
-  // Kick off background prefetch immediately so views are instant when visited
-  ensureSessionsLoaded().catch(() => {});
-  ensureCoursesLoaded().catch(() => {});
-
+  // ── Shell-first strategy ────────────────────────────────────────────────────
+  // 1. Render Today instantly (uses /api/today — small & fast — if cache cold)
   showView('today');
+
+  // 2. Fire the big prefetch entirely in the background *after* Today renders.
+  //    All other views (Week, Calendar, Courses) will be instant on first visit
+  //    because the data will already be in RAM by the time the user navigates.
+  //    The prefetchSessionsInBackground helper re-paints Calendar automatically
+  //    if it happens to be active when the data lands.
+  setTimeout(() => {
+    prefetchSessionsInBackground();
+    ensureCoursesLoaded().catch(() => {});
+  }, 0); // next tick — gives Today render time to complete first
 
   // Auto-refresh today view every 5 minutes (reads from cache if fresh)
   setInterval(() => {

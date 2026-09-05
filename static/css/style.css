@@ -1394,3 +1394,19 @@ a.course-card-link:hover .course-link-hint {
   flex-shrink: 0;
 }
 
+/* ─── Calendar background-load spinner ──────────────────────────────────────── */
+.cal-spinner {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border: 2px solid rgba(255,255,255,0.12);
+  border-top-color: var(--accent-2);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
