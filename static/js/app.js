@@ -768,12 +768,21 @@ function _scheduleClassNotifs(sessions, now, minsBefore) {
 
 async function sendMorningSummary(dateStr) {
   try {
-    const sessions = getCachedSessions(dateStr);
-    const count = sessions.filter(s => !s.is_special).length;
+    // Use cache if warm, otherwise fetch from API so we always have real data
+    let sessions = getCachedSessions(dateStr);
+    if (sessions.length === 0) {
+      try {
+        const data = await api('/api/today');
+        sessions = data.sessions || [];
+      } catch (e) { /* ignore network errors */ }
+    }
+    const classSessions = sessions.filter(s => !s.is_special);
+    const count = classSessions.length;
+    const body = count > 0
+      ? `You have ${count} class${count > 1 ? 'es' : ''} today. First: ${classSessions[0]?.subject_raw}`
+      : 'No classes today! Enjoy your day. 🎉';
     new Notification('Good Morning! 🌅', {
-      body: count > 0
-        ? `You have ${count} class${count > 1 ? 'es' : ''} today. First: ${sessions[0]?.subject_raw}`
-        : 'No classes today! Enjoy your day. 🎉',
+      body,
       icon: '/static/icons/icon-192.png',
       tag: 'morning-summary',
     });
@@ -798,6 +807,34 @@ document.addEventListener('DOMContentLoaded', () => {
     ensureCoursesLoaded().catch(() => {});
   }, 0); // next tick — gives Today render time to complete first
 
+  // 3. If notifications are already granted, silently re-register the push
+  //    subscription with the server so the stored endpoint stays fresh after
+  //    browser restarts (subscriptions can rotate). This is what makes
+  //    server-side daily reminders work reliably.
+  if ('Notification' in window && Notification.permission === 'granted') {
+    setTimeout(async () => {
+      try {
+        const pushSub = await getBrowserPushSubscription();
+        const s = await api('/api/notifications/settings');
+        await api('/api/notifications/subscribe', {
+          method: 'POST',
+          body: JSON.stringify({
+            subscription: pushSub,
+            notify_before_class: s.notify_before_class,
+            notify_minutes_before: s.notify_minutes_before,
+            notify_morning: s.notify_morning,
+            morning_time: s.morning_time,
+          })
+        });
+        // Re-arm the local scheduler now that we have a fresh subscription
+        scheduleLocalNotifications();
+      } catch (e) {
+        // Non-fatal — local notifications still work even if push re-reg fails
+        scheduleLocalNotifications();
+      }
+    }, 2000); // wait 2 s so SW is ready
+  }
+
   // Auto-refresh today view every 5 minutes (reads from cache if fresh)
   setInterval(() => {
     if (state.currentView === 'today') loadToday();
@@ -811,7 +848,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Update date badge every minute
   setInterval(updateDateBadge, 60 * 1000);
+
+  // Show one-time disclaimer on first visit (localStorage-gated, no DB)
+  showDisclaimer();
 });
+
+// ─── ONE-TIME DISCLAIMER ─────────────────────────────────────────────────────
+const DISCLAIMER_KEY = 'iim_disclaimer_ack';
+
+function showDisclaimer() {
+  if (localStorage.getItem(DISCLAIMER_KEY)) return; // already seen on this device
+  // Small delay so the main UI renders first — less jarring
+  setTimeout(() => {
+    el('disclaimerBackdrop').classList.add('show');
+    el('disclaimerSheet').classList.add('show');
+    el('disclaimerGotIt').focus();
+  }, 600);
+}
+
+function dismissDisclaimer() {
+  el('disclaimerBackdrop').classList.remove('show');
+  el('disclaimerSheet').classList.remove('show');
+  localStorage.setItem(DISCLAIMER_KEY, '1');
+}
 
 // ─── SYNC WATCH ───────────────────────────────────────────────────────────────
 /**

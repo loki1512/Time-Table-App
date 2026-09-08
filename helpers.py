@@ -240,23 +240,76 @@ def sync_from_google_sheet(sync_url=None):
 
 
 def start_morning_scheduler(app):
-    """Start a background daemon thread that checks every morning at 06:00 AM IST to auto-sync."""
+    """Start a background daemon thread that:
+    1. Auto-syncs timetable from Google Sheet every morning at 06:00 AM IST.
+    2. Sends per-user morning push notifications at their configured morning_time.
+    3. Sends server-side pre-class push reminders based on notify_before_class settings.
+    """
     import threading
     import time
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta, timezone, date as _date
+
+    def _send_push(notif, title, body, url='/', tag='reminder'):
+        """Helper: send a web push to a single Notification row. Returns True on success."""
+        import json
+        from pywebpush import webpush, WebPushException
+        from config import Config
+        from extensions import db
+
+        if not notif.push_subscription or notif.push_subscription in ('null', ''):
+            return False
+        try:
+            sub_info = json.loads(notif.push_subscription)
+        except Exception:
+            return False
+        if not isinstance(sub_info, dict) or not sub_info.get('endpoint'):
+            return False
+
+        payload = json.dumps({
+            'title': title,
+            'body': body,
+            'url': url,
+            'tag': tag,
+            'timestamp': int(datetime.utcnow().timestamp() * 1000)
+        })
+        try:
+            webpush(
+                subscription_info=sub_info,
+                data=payload,
+                vapid_private_key=Config.VAPID_PRIVATE_KEY,
+                vapid_claims={'sub': f'mailto:{Config.VAPID_CLAIM_EMAIL}'},
+                timeout=10
+            )
+            return True
+        except WebPushException as ex:
+            status_code = getattr(ex.response, 'status_code', None) if hasattr(ex, 'response') else None
+            if status_code in [400, 401, 404, 410]:
+                # Subscription expired — clear it
+                try:
+                    notif.push_subscription = None
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+        except Exception:
+            pass
+        return False
 
     def _scheduler_loop():
         time.sleep(10)  # Initial delay after server boot
-        # IST is UTC+5:30
         ist_tz = timezone(timedelta(hours=5, minutes=30))
         last_synced_date = None
+
+        # Track sent notifications to avoid duplicates within one server session
+        morning_sent = set()   # (user_id, date_str)
+        class_sent = set()     # (user_id, session_id)
 
         while True:
             try:
                 now_ist = datetime.now(ist_tz)
                 today_str = now_ist.strftime('%Y-%m-%d')
+                now_time_str = now_ist.strftime('%H:%M')
 
-                # Check if it's 6:00 AM or later and we haven't synced today yet
+                # ── 1. Google Sheet Auto-Sync ─────────────────────────────────
                 if now_ist.hour >= 6 and last_synced_date != today_str:
                     from config import Config
                     if Config.GOOGLE_SHEET_SYNC_URL:
@@ -266,8 +319,77 @@ def start_morning_scheduler(app):
                             print(f'[AUTO-SYNC] Result: {msg}')
                             if success:
                                 last_synced_date = today_str
+
+                # ── 2. Per-user morning push notification ─────────────────────
+                with app.app_context():
+                    from models import Notification, ClassSession, TimeSlot
+                    from config import Config
+
+                    if Config.VAPID_PRIVATE_KEY:
+                        all_notifs = Notification.query.filter(
+                            Notification.push_subscription.isnot(None),
+                            Notification.push_subscription != 'null',
+                            Notification.push_subscription != ''
+                        ).all()
+
+                        today_date = _date.fromisoformat(today_str)
+
+                        for notif in all_notifs:
+                            # ── Morning summary ───────────────────────────────
+                            if notif.notify_morning and notif.morning_time:
+                                morning_key = (notif.user_id, today_str)
+                                # Check if current time matches morning_time (within the 5-min check window)
+                                if now_time_str >= notif.morning_time and morning_key not in morning_sent:
+                                    sessions_today = ClassSession.query.filter_by(date=today_date).order_by(ClassSession.slot).all()
+                                    class_sessions = [s for s in sessions_today if not s.is_special]
+                                    count = len(class_sessions)
+                                    if count > 0:
+                                        first = class_sessions[0]
+                                        first_name = (first.course.short_name if first.course else first.subject_raw) or first.subject_raw
+                                        slot_obj = TimeSlot.query.filter_by(slot_number=first.slot).first()
+                                        first_time = slot_obj.start_time if slot_obj else ''
+                                        body = f'You have {count} class{"es" if count > 1 else ""} today. First: {first_name}' + (f' at {first_time}' if first_time else '')
+                                    else:
+                                        body = 'No classes today! Enjoy your free day. 🎉'
+                                    ok = _send_push(notif, 'Good Morning! 🌅', body, '/', 'morning-summary')
+                                    if ok:
+                                        morning_sent.add(morning_key)
+                                        print(f'[NOTIF] Morning summary sent to user {notif.user_id}')
+
+                            # ── Pre-class reminders ───────────────────────────
+                            if notif.notify_before_class:
+                                mins = notif.notify_minutes_before or 15
+                                sessions_today = ClassSession.query.filter_by(date=today_date).order_by(ClassSession.slot).all()
+                                for s in sessions_today:
+                                    if s.is_special:
+                                        continue
+                                    class_key = (notif.user_id, s.id)
+                                    if class_key in class_sent:
+                                        continue
+                                    slot_obj = TimeSlot.query.filter_by(slot_number=s.slot).first()
+                                    if not slot_obj:
+                                        continue
+                                    # Compute scheduled alert time = class_start - mins_before
+                                    sh, sm = map(int, slot_obj.start_time.split(':'))
+                                    class_start = now_ist.replace(hour=sh, minute=sm, second=0, microsecond=0)
+                                    alert_time = class_start - timedelta(minutes=mins)
+                                    alert_str = alert_time.strftime('%H:%M')
+                                    # Fire if we are within a 5-minute window of the alert time
+                                    if alert_str <= now_time_str < slot_obj.start_time:
+                                        subject = (s.course.short_name if s.course else s.subject_raw) or s.subject_raw
+                                        body = f'{subject} starts in {mins} minutes'
+                                        ok = _send_push(notif, '📚 Class Starting Soon!', body, '/', f'class-{s.id}')
+                                        if ok:
+                                            class_sent.add(class_key)
+                                            print(f'[NOTIF] Pre-class reminder sent to user {notif.user_id} for session {s.id}')
+
+                # Reset daily tracking sets at midnight
+                if now_time_str == '00:00':
+                    morning_sent.clear()
+                    class_sent.clear()
+
             except Exception as ex:
-                print(f'[AUTO-SYNC Error] {ex}')
+                print(f'[SCHEDULER Error] {ex}')
 
             time.sleep(300)  # Check every 5 minutes
 

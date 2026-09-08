@@ -390,6 +390,29 @@
       is_super_admin: {{ 'true' if user.is_super_admin else 'false' }},
     };
   </script>
+
+  <!-- ── One-time Disclaimer Bottom-Sheet ─────────────────────────────────── -->
+  <div id="disclaimerBackdrop" class="disclaimer-backdrop" onclick="dismissDisclaimer()"></div>
+  <div id="disclaimerSheet" class="disclaimer-sheet" role="dialog" aria-modal="true" aria-labelledby="disclaimerTitle">
+    <div class="disclaimer-handle"></div>
+    <div class="disclaimer-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 8v4M12 16h.01"/>
+      </svg>
+    </div>
+    <h2 class="disclaimer-title" id="disclaimerTitle">Heads up! 📋</h2>
+    <p class="disclaimer-body">
+      This app is a <strong>convenience tool</strong> — not the official source of truth.
+      Timetable data here may occasionally be outdated or contain errors.
+    </p>
+    <p class="disclaimer-body" style="margin-top: 10px;">
+      Always cross-check with the <strong>official IIM Sambalpur institutional timetable</strong>
+      for exam schedules, rescheduled classes, or critical deadlines.
+    </p>
+    <div class="disclaimer-footer-note">You won't see this again on this device.</div>
+    <button class="disclaimer-btn" id="disclaimerGotIt" onclick="dismissDisclaimer()">Got it, thanks!</button>
+  </div>
 </body>
 </html>
 
