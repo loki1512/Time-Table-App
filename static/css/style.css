@@ -293,15 +293,80 @@ input, select, textarea { font-family: var(--font); }
   background: linear-gradient(135deg, rgba(41,82,204,0.18), rgba(201,162,39,0.10));
   border: 1px solid rgba(41,82,204,0.25);
   border-radius: var(--radius-lg);
-  padding: 24px;
-  margin-bottom: 16px;
+  padding: 16px;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
 }
 
+/* Day-nav chevron buttons ─────────────────────────── */
+.day-nav-btn {
+  flex-shrink: 0;
+  color: var(--text-2);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+.day-nav-btn:hover {
+  background: rgba(41,82,204,0.20);
+  border-color: rgba(41,82,204,0.4);
+  color: var(--accent-2);
+}
+
+.today-date-display { flex: 1; text-align: center; min-width: 0; }
+
+.today-hero-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Back-to-Today pill ──────────────────────────────── */
+.back-to-today-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(201,162,39,0.12);
+  border: 1px solid rgba(201,162,39,0.3);
+  color: var(--accent-3);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 50px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+  animation: toast-in 0.2s ease-out;
+}
+.back-to-today-btn:hover {
+  background: rgba(201,162,39,0.22);
+  border-color: rgba(201,162,39,0.5);
+}
+
+/* Slide animations for day transitions ─────────────── */
+@keyframes slideInFromRight {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInFromLeft {
+  from { opacity: 0; transform: translateX(-28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.slide-in-right { animation: slideInFromRight 0.22s ease-out; }
+.slide-in-left  { animation: slideInFromLeft  0.22s ease-out; }
+
 .today-weekday {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
   background: linear-gradient(135deg, var(--accent-2), var(--accent-3));
   -webkit-background-clip: text;
@@ -310,7 +375,7 @@ input, select, textarea { font-family: var(--font); }
 }
 
 .today-full-date {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-2);
   margin-top: 2px;
 }
@@ -319,12 +384,12 @@ input, select, textarea { font-family: var(--font); }
   background: rgba(41,82,204,0.25);
   border: 1px solid rgba(41,82,204,0.35);
   border-radius: 50px;
-  padding: 8px 16px;
+  padding: 8px 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-.stat-num { font-size: 24px; font-weight: 800; color: var(--accent-2); line-height: 1; }
+.stat-num { font-size: 22px; font-weight: 800; color: var(--accent-2); line-height: 1; }
 .stat-lbl { font-size: 11px; color: var(--text-2); }
 
 /* Next class banner */
@@ -337,6 +402,7 @@ input, select, textarea { font-family: var(--font); }
   display: flex;
   align-items: center;
   gap: 12px;
+  transition: border-color var(--transition), background var(--transition);
 }
 
 .ncb-label { font-size: 12px; color: var(--success); font-weight: 600; white-space: nowrap; }

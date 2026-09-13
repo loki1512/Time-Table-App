@@ -115,17 +115,28 @@
         <!-- TODAY VIEW -->
         <section class="view active" id="viewToday">
           <div class="today-hero" id="todayHero">
+            <button class="day-nav-btn" id="prevDayBtn" onclick="changeDay(-1)" title="Previous day">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
             <div class="today-date-display">
               <div class="today-weekday" id="todayWeekday">Loading...</div>
               <div class="today-full-date" id="todayFullDate"></div>
             </div>
-            <div class="today-stats">
+            <div class="today-hero-right">
               <div class="stat-pill" id="classCountPill">
-                <span class="stat-num" id="classCount">â€“</span>
+                <span class="stat-num" id="classCount">&mdash;</span>
                 <span class="stat-lbl">classes</span>
               </div>
+              <button class="day-nav-btn" id="nextDayBtn" onclick="changeDay(1)" title="Next day">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
             </div>
           </div>
+
+          <button class="back-to-today-btn" id="backToTodayBtn" onclick="jumpToToday()" style="display:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/></svg>
+            Back to Today
+          </button>
 
           <div class="next-class-banner" id="nextClassBanner" style="display:none">
             <div class="ncb-label">Next class in</div>

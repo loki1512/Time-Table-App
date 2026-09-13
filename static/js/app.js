@@ -6,6 +6,7 @@
 const state = {
   currentView: 'today',
   today: null,
+  todayOffset: 0,              // 0 = today, +1 = tomorrow, -1 = yesterday
   weekStart: null,
   calYear: null,
   calMonth: null,
@@ -15,8 +16,10 @@ const state = {
 
   // Cache tracking
   sessionsCachedAt: null,      // timestamp of last full fetch
+  weekCachedAt: null,          // timestamp of last week fetch
   coursesCachedAt: null,       // timestamp of last courses fetch
-  prefetchPromise: null,        // deduplicates concurrent prefetch calls
+  prefetchPromise: null,       // deduplicates concurrent prefetch calls
+  lastForcedRefresh: null,     // timestamp of last 6-hour forced refresh
 };
 
 // Cache TTLs
@@ -116,7 +119,7 @@ function showView(name) {
   closeSidebar();
 
   // Lazy-load each view
-  if (name === 'today') loadToday();
+  if (name === 'today') loadDay(state.todayOffset);
   if (name === 'week') loadWeek();
   if (name === 'calendar') renderCalendar();
   if (name === 'courses') loadCourses();
@@ -158,6 +161,33 @@ async function ensureSessionsLoaded({ forceRefresh = false } = {}) {
 }
 
 /**
+ * Stage 2 of the waterfall: load this week's sessions from the dedicated
+ * /api/sessions/week endpoint (small payload, ~100 ms).  Merges the result
+ * into state.allSessions so that the Week view renders immediately on first
+ * switch.  Then hands off to the full-term prefetch (Stage 3).
+ */
+async function loadWeekCache() {
+  try {
+    const data = await api('/api/sessions/week');
+    const sessions = data.sessions || [];
+    sessions.forEach(s => {
+      if (!state.allSessions[s.date]) state.allSessions[s.date] = [];
+      // Avoid duplicates if full cache already arrived
+      if (!state.allSessions[s.date].find(x => x.id === s.id)) {
+        state.allSessions[s.date].push(s);
+      }
+    });
+    state.weekCachedAt = Date.now();
+    // If Week view is already visible, re-paint it with the fresh data
+    if (state.currentView === 'week') loadWeek();
+  } catch (e) {
+    // Non-fatal — full-term prefetch will cover this
+  }
+  // Stage 3 — full-term in background
+  prefetchSessionsInBackground();
+}
+
+/**
  * Fire-and-forget prefetch. Runs entirely in background — never blocks a view.
  * After the data lands, if Calendar is active re-paint it, so the user sees
  * dots appear without having clicked away and back.
@@ -190,34 +220,73 @@ async function ensureCoursesLoaded({ forceRefresh = false } = {}) {
   state.coursesCachedAt = Date.now();
 }
 
-// ─── TODAY VIEW ───────────────────────────────────────────────────────────────
-async function loadToday() {
-  const now = new Date();
-  state.today = fmt(now);
+// ─── TODAY / DAY NAVIGATION ───────────────────────────────────────────────────
 
-  el('todayWeekday').textContent = now.toLocaleDateString('en-IN', { weekday: 'long' });
-  el('todayFullDate').textContent = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+/**
+ * Central entry-point for the Today view.  offset=0 → real today,
+ * offset=+1 → tomorrow, offset=-1 → yesterday, etc.
+ */
+async function loadDay(offset = 0) {
+  state.todayOffset = offset;
+  const baseDate = new Date();
+  const targetDate = addDays(baseDate, offset);
+  const dateStr = fmt(targetDate);
+  state.today = fmt(baseDate); // always keep today's real date
 
-  // ── Strategy: render immediately from whatever is in cache; if cache is warm
-  //    we're done instantly. If cold, fall back to the fast /api/today endpoint
-  //    (returns only today's sessions — much smaller than the full-term fetch).
-  //    The big prefetch runs in the background and will warm the cache for all
-  //    other views without blocking this render.
-  const cached = getCachedSessions(state.today);
-  if (cached.length > 0 || state.sessionsCachedAt) {
-    // Cache has something (or was loaded before and today just has no classes)
-    renderTodaySessions(cached, now);
+  // ── Update hero header ─────────────────────────────────────────────────────
+  el('todayWeekday').textContent = targetDate.toLocaleDateString('en-IN', { weekday: 'long' });
+  el('todayFullDate').textContent = targetDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  // ── Show / hide Back-to-Today pill ────────────────────────────────────────
+  const pill = el('backToTodayBtn');
+  if (pill) pill.style.display = offset !== 0 ? 'flex' : 'none';
+
+  // ── Hide next-class banner when not viewing today ──────────────────────────
+  if (offset !== 0) el('nextClassBanner').style.display = 'none';
+
+  // ── Animate slide direction ────────────────────────────────────────────────
+  const list = el('todaySessions');
+  if (list && offset !== 0) {
+    list.classList.remove('slide-in-left', 'slide-in-right');
+    void list.offsetWidth; // reflow
+    list.classList.add(offset > 0 ? 'slide-in-right' : 'slide-in-left');
+  }
+
+  // ── Render from cache if warm ──────────────────────────────────────────────
+  const cached = state.allSessions[dateStr];
+  if (cached !== undefined || state.sessionsCachedAt) {
+    // Full cache warm — use it even for past/future days
+    renderTodaySessions(cached || [], targetDate);
     return;
   }
 
-  // Cache is cold — hit the small, fast today endpoint directly
+  // ── Cache cold: use fast /api/today for offset=0, or /api/sessions for others
   try {
-    const data = await api('/api/today');
-    renderTodaySessions(data.sessions, now);
+    let sessions;
+    if (offset === 0) {
+      const data = await api('/api/today');
+      sessions = data.sessions;
+    } else {
+      sessions = await api(`/api/sessions?start=${dateStr}&end=${dateStr}`);
+    }
+    renderTodaySessions(sessions, targetDate);
   } catch (err) {
     el('todaySessions').innerHTML = `<div class="empty-state"><span class="empty-icon">⚠️</span><div class="empty-title">Failed to load</div><div class="empty-desc">${err.message}</div></div>`;
   }
 }
+
+/** Exposed global — called by Prev/Next buttons and swipe handler */
+function changeDay(dir) {
+  loadDay(state.todayOffset + dir);
+}
+
+/** Called by the Back-to-Today pill */
+function jumpToToday() {
+  loadDay(0);
+}
+
+// Keep loadToday() as a thin alias so existing call-sites (sync-watch, etc.) still work
+function loadToday() { loadDay(state.todayOffset); }
 
 function renderTodaySessions(sessions, now) {
   const countEl = el('classCount');
@@ -235,10 +304,16 @@ function renderTodaySessions(sessions, now) {
     return;
   }
 
-  // Determine next/current class
-  const nowMins = now.getHours() * 60 + now.getMinutes();
+  // ── Next-class banner: only relevant when viewing actual today ────────────
   let nextSession = null;
   let currentSession = null;
+
+  if (state.todayOffset !== 0) {
+    el('nextClassBanner').style.display = 'none';
+    // Still render session cards below — skip banner logic entirely
+  } else {
+  // Determine next/current class
+  const nowMins = now.getHours() * 60 + now.getMinutes();
 
   sessions.forEach(s => {
     const st = SLOT_TIMES[s.slot];
@@ -270,24 +345,36 @@ function renderTodaySessions(sessions, now) {
   } else {
     el('nextClassBanner').style.display = 'none';
   }
+  } // close outer else (offset === 0 banner block)
 
   // Render session cards
   el('todaySessions').innerHTML = sessions.map(s => {
     const st = SLOT_TIMES[s.slot] || {};
-    const nowMins2 = now.getHours() * 60 + now.getMinutes();
-    let stateClass = 'past';
+    let stateClass = 'upcoming';
     let statusTag = '';
-    if (s.slot && st.start) {
-      const [sh, sm] = st.start.split(':').map(Number);
-      const [eh, em] = st.end.split(':').map(Number);
-      const startM = sh * 60 + sm;
-      const endM = eh * 60 + em;
-      if (nowMins2 >= startM && nowMins2 < endM) {
-        stateClass = 'current';
-        statusTag = '<span class="session-status-tag status-now">Now</span>';
-      } else if (nowMins2 < startM) {
-        stateClass = 'upcoming';
-        if (s === nextSession) statusTag = '<span class="session-status-tag status-next">Next</span>';
+
+    if (state.todayOffset < 0) {
+      // Viewing a past day — all sessions are done
+      stateClass = 'past';
+    } else if (state.todayOffset > 0) {
+      // Viewing a future day — all sessions are upcoming, no Now/Next tags
+      stateClass = 'upcoming';
+    } else {
+      // Viewing today — use live time-of-day logic
+      const nowMins2 = now.getHours() * 60 + now.getMinutes();
+      stateClass = 'past';
+      if (s.slot && st.start) {
+        const [sh, sm] = st.start.split(':').map(Number);
+        const [eh, em] = st.end.split(':').map(Number);
+        const startM = sh * 60 + sm;
+        const endM = eh * 60 + em;
+        if (nowMins2 >= startM && nowMins2 < endM) {
+          stateClass = 'current';
+          statusTag = '<span class="session-status-tag status-now">Now</span>';
+        } else if (nowMins2 < startM) {
+          stateClass = 'upcoming';
+          if (s === nextSession) statusTag = '<span class="session-status-tag status-next">Next</span>';
+        }
       }
     }
     if (s.is_special) stateClass += ' special';
@@ -793,19 +880,22 @@ async function sendMorningSummary(dateStr) {
 document.addEventListener('DOMContentLoaded', () => {
   updateDateBadge();
 
-  // ── Shell-first strategy ────────────────────────────────────────────────────
-  // 1. Render Today instantly (uses /api/today — small & fast — if cache cold)
+  // ── Shell-first / waterfall strategy ────────────────────────────────────────
+  // Stage 1: Render Today instantly (uses /api/today if cache cold)
   showView('today');
 
-  // 2. Fire the big prefetch entirely in the background *after* Today renders.
-  //    All other views (Week, Calendar, Courses) will be instant on first visit
-  //    because the data will already be in RAM by the time the user navigates.
-  //    The prefetchSessionsInBackground helper re-paints Calendar automatically
-  //    if it happens to be active when the data lands.
+  // Stage 2 (next tick): load this week → Stage 3 (after week): full term.
+  // This 3-stage pipeline means:
+  //   • Today  — instant  (Stage 1)
+  //   • Week   — ~100 ms later (Stage 2 week payload)
+  //   • Calendar / all other dates — warm by the time the user navigates there
   setTimeout(() => {
-    prefetchSessionsInBackground();
+    loadWeekCache();           // Stage 2 → fires Stage 3 internally
     ensureCoursesLoaded().catch(() => {});
-  }, 0); // next tick — gives Today render time to complete first
+  }, 0);
+
+  // ── Swipe gesture on Today sessions list ─────────────────────────────────
+  _initTodaySwipe();
 
   // 3. If notifications are already granted, silently re-register the push
   //    subscription with the server so the stored endpoint stays fresh after
@@ -853,6 +943,25 @@ document.addEventListener('DOMContentLoaded', () => {
   showDisclaimer();
 });
 
+// ─── SWIPE GESTURE (Today view) ───────────────────────────────────────────────
+function _initTodaySwipe() {
+  const container = el('viewToday');
+  if (!container) return;
+  let startX = 0, startY = 0;
+  container.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  container.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    // Only treat horizontal swipes (dx > 50 px, and more horizontal than vertical)
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      changeDay(dx < 0 ? 1 : -1);
+    }
+  }, { passive: true });
+}
+
 // ─── ONE-TIME DISCLAIMER ─────────────────────────────────────────────────────
 const DISCLAIMER_KEY = 'iim_disclaimer_ack';
 
@@ -873,28 +982,46 @@ function dismissDisclaimer() {
 }
 
 // ─── SYNC WATCH ───────────────────────────────────────────────────────────────
+const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+
 /**
- * Poll /api/last-sync every 60 s.
- * If the server's sync timestamp is newer than when we last loaded our cache,
- * force-refresh so students see the updated timetable within ~1 minute of any
- * admin upload or automated cron sync.
+ * Poll /api/last-sync every 60 s (reactive) AND force a full refresh every
+ * 6 hours regardless (proactive cadence).
  */
 async function watchForTimetableSync() {
   const POLL_MS = 60 * 1000;
+  state.lastForcedRefresh = Date.now();
 
   async function check() {
     try {
       const { last_sync } = await api('/api/last-sync');
-      if (!last_sync) return; // no sync yet since server start
-      const serverSyncMs = new Date(last_sync).getTime();
-      if (state.sessionsCachedAt && serverSyncMs > state.sessionsCachedAt) {
-        console.log('[Sync Watch] Timetable updated on server — refreshing...');
+      const now = Date.now();
+
+      // ── Reactive: server has new data since our cache ──────────────────────
+      if (last_sync) {
+        const serverSyncMs = new Date(last_sync).getTime();
+        if (state.sessionsCachedAt && serverSyncMs > state.sessionsCachedAt) {
+          console.log('[Sync Watch] Timetable updated on server — refreshing...');
+          await ensureSessionsLoaded({ forceRefresh: true });
+          const v = state.currentView;
+          if (v === 'today')    loadToday();
+          if (v === 'week')     loadWeek();
+          if (v === 'calendar') _paintCalendar(new Date());
+          showToast('Timetable updated!', 'success');
+          state.lastForcedRefresh = now;
+          return;
+        }
+      }
+
+      // ── Proactive: force a refresh every 6 hours ───────────────────────────
+      if (now - state.lastForcedRefresh >= SIX_HOURS_MS) {
+        console.log('[Sync Watch] 6-hour proactive refresh...');
+        state.lastForcedRefresh = now;
         await ensureSessionsLoaded({ forceRefresh: true });
         const v = state.currentView;
         if (v === 'today')    loadToday();
         if (v === 'week')     loadWeek();
         if (v === 'calendar') _paintCalendar(new Date());
-        showToast('Timetable updated!', 'success');
       }
     } catch (e) { /* network errors are non-fatal */ }
   }
