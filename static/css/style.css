@@ -1330,6 +1330,30 @@ a.course-card-link:hover .course-link-hint {
 }
 .profile-edit-btn:hover { color: var(--accent-2); background: rgba(255,255,255,0.06); }
 
+/* ─── TODAY VIEW ─────────────────────────────────────────────────────────────────────────────────────── */
+.feature-tour-banner {
+  background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(59,130,246,0.10));
+  border: 1px solid rgba(16,185,129,0.3);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: slideInFromRight 0.3s ease-out;
+}
+.tour-icon { font-size: 16px; flex-shrink: 0; }
+.tour-text { font-size: 13px; color: var(--text-2); flex: 1; line-height: 1.4; }
+.tour-text strong { color: var(--text); }
+.tour-close {
+  background: none; border: none; color: var(--text-2);
+  font-size: 16px; padding: 4px; cursor: pointer;
+  border-radius: 50%; width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s;
+}
+.tour-close:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+
 /* ─── PROFILE DRAWER ──────────────────────────────────────────────────────────── */
 .profile-drawer-overlay {
   position: fixed;

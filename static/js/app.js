@@ -941,7 +941,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Show one-time disclaimer on first visit (localStorage-gated, no DB)
   showDisclaimer();
+  
+  // Show day navigation feature tour
+  showDayNavTour();
 });
+
+// ─── DAY NAV FEATURE TOUR ────────────────────────────────────────────────────
+const DAY_NAV_TOUR_KEY = 'iim_day_nav_tour_ack';
+
+function showDayNavTour() {
+  if (!localStorage.getItem(DAY_NAV_TOUR_KEY)) {
+    const el = document.getElementById('dayNavTour');
+    if (el) el.style.display = 'flex';
+  }
+}
+
+function dismissDayNavTour() {
+  localStorage.setItem(DAY_NAV_TOUR_KEY, '1');
+  const el = document.getElementById('dayNavTour');
+  if (el) el.style.display = 'none';
+}
 
 // ─── SWIPE GESTURE (Today view) ───────────────────────────────────────────────
 function _initTodaySwipe() {

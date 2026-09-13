@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/css/style.css?v=3.1" />
+  <link rel="stylesheet" href="/static/css/style.css?v=3.2" />
 </head>
 <body>
   <!-- App Shell -->
@@ -114,6 +114,11 @@
 
         <!-- TODAY VIEW -->
         <section class="view active" id="viewToday">
+          <div class="feature-tour-banner" id="dayNavTour" style="display:none">
+            <div class="tour-icon">💡</div>
+            <div class="tour-text"><strong>Tip:</strong> Swipe left/right or tap the arrows to check tomorrow's and yesterday's schedule.</div>
+            <button class="tour-close" onclick="dismissDayNavTour()">✕</button>
+          </div>
           <div class="today-hero" id="todayHero">
             <div class="today-hero-nav">
               <button class="day-nav-btn" id="prevDayBtn" onclick="changeDay(-1)" title="Previous day">
@@ -386,7 +391,7 @@
     </div>
   </div>
 
-  <script src="/static/js/app.js?v=3.0"></script>
+  <script src="/static/js/app.js?v=3.2"></script>
   <script>
     // Register PWA Service Worker
     if ('serviceWorker' in navigator) {
