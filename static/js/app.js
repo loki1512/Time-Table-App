@@ -659,24 +659,60 @@ function renderCourses(courses) {
     el('coursesGrid').innerHTML = `<div class="empty-state"><span class="empty-icon">📚</span><div class="empty-title">No courses</div></div>`;
     return;
   }
-  el('coursesGrid').innerHTML = courses.map(c => {
-    const hasLink = c.course_link && c.course_link.trim() !== '';
-    const cardContent = `
-      <div class="course-abbr">${escHtml(c.short_name || c.code)}</div>
-      <div class="course-name">${escHtml(c.name)}</div>
-      <div class="course-meta">
-        <span class="course-tag">${c.credits} cr</span>
-        ${c.area ? `<span class="course-tag">${escHtml(c.area)}</span>` : ''}
-        <span class="course-tag">${escHtml(c.code)}</span>
-      </div>
-      ${c.faculty ? `<div class="course-faculty">👤 ${escHtml(c.faculty)}</div>` : ''}
-      ${hasLink ? `<div class="course-link-hint">View Course →</div>` : ''}`;
-    if (hasLink) {
-      return `<a class="course-card course-card-link" href="${escHtml(c.course_link)}" target="_blank" rel="noopener" onclick="window.open(this.href, '_blank'); return false;" style="--course-color:${c.color}">${cardContent}</a>`;
-    }
-    return `<div class="course-card" style="--course-color:${c.color}">${cardContent}</div>`;
-  }).join('');
+
+  const term2 = courses.filter(c => c.code && c.code.startsWith('MBA-BA2'));
+  const term1 = courses.filter(c => !c.code || !c.code.startsWith('MBA-BA2'));
+
+  function buildCards(list) {
+    return list.map(c => {
+      const hasLink = c.course_link && c.course_link.trim() !== '';
+      const cardContent = `
+        <div class="course-abbr">${escHtml(c.short_name || c.code)}</div>
+        <div class="course-name">${escHtml(c.name)}</div>
+        <div class="course-meta">
+          <span class="course-tag">${c.credits} cr</span>
+          ${c.area ? `<span class="course-tag">${escHtml(c.area)}</span>` : ''}
+          <span class="course-tag">${escHtml(c.code)}</span>
+        </div>
+        ${c.faculty ? `<div class="course-faculty">👤 ${escHtml(c.faculty)}</div>` : ''}
+        ${hasLink ? `<div class="course-link-hint">View Course →</div>` : ''}`;
+      if (hasLink) {
+        return `<a class="course-card course-card-link" href="${escHtml(c.course_link)}" target="_blank" rel="noopener" onclick="window.open(this.href, '_blank'); return false;" style="--course-color:${c.color}">${cardContent}</a>`;
+      }
+      return `<div class="course-card" style="--course-color:${c.color}">${cardContent}</div>`;
+    }).join('');
+  }
+
+  // Render Term II (always visible)
+  el('coursesGrid').innerHTML = term2.length > 0
+    ? buildCards(term2)
+    : `<div class="empty-state"><span class="empty-icon">📚</span><div class="empty-title">No Term II courses yet</div></div>`;
+
+  // Render Term I (hidden behind toggle)
+  if (term1.length > 0) {
+    el('term1Grid').innerHTML = buildCards(term1);
+    el('term1Section').style.display = '';
+  } else {
+    el('term1Section').style.display = 'none';
+  }
 }
+
+function toggleTerm1() {
+  const grid = el('term1Grid');
+  const icon = el('term1Icon');
+  const btn  = el('term1Toggle');
+  const open = grid.style.display !== 'none';
+  if (open) {
+    grid.style.display = 'none';
+    icon.textContent = '▶';
+    btn.querySelector('span:last-child').textContent = 'Show Term I Resources';
+  } else {
+    grid.style.display = '';
+    icon.textContent = '▼';
+    btn.querySelector('span:last-child').textContent = 'Hide Term I Resources';
+  }
+}
+
 
 
 // ─── NOTIFICATIONS ────────────────────────────────────────────────────────────

@@ -144,6 +144,19 @@ def import_excel(source):
             'Managerial Computing': 'MComp',
             'Marketing Management': 'MM',
             'Organizational Behaviour': 'OBD',
+            # Term II courses
+            'Business Intelligence and Data Visualisation': 'BIDV',
+            'Decision Sciences-II': 'DS-II',
+            'Decision Sciences II': 'DS II',
+            'Emerging Legal Concepts for Business Analytics': 'ELCBA',
+            'Environmental, Social & Governance': 'ESG',
+            'Environmental Social and Governance': 'ESG',
+            'Financial Management': 'FM',
+            'Human Resource Management': 'HRM',
+            'Indian Society, Business & Law': 'ISBL',
+            'Indian Society Business and Law': 'ISBL',
+            'Operations & Supply Chain Management': 'OSCM',
+            'Operations and Supply Chain Management': 'OSCM',
         }
         short = next((v for k, v in short_map.items() if k.lower() in name.lower()), name[:4])
 

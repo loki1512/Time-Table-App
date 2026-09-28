@@ -889,6 +889,49 @@ a.course-card-link:hover .course-link-hint {
   opacity: 1;
 }
 
+/* ─── TERM I COLLAPSIBLE SECTION ──────────────────────────────────────────── */
+.term1-section {
+  margin-top: 8px;
+}
+
+.term1-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1.5px dashed var(--border);
+  border-radius: 14px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  text-align: left;
+}
+
+.term1-toggle:hover {
+  background: var(--surface-hover, rgba(255,255,255,0.06));
+  border-color: var(--accent, #6366f1);
+  color: var(--text);
+}
+
+.term1-toggle-icon {
+  font-size: 0.75rem;
+  transition: transform 0.25s;
+  color: var(--accent, #6366f1);
+}
+
+.term1-grid {
+  margin-top: 12px;
+  opacity: 0.82;
+}
+
+.term1-grid .course-card {
+  border-style: dashed;
+}
+
 /* â”€â”€â”€ NOTIFICATIONS VIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .notif-container {
   max-width: 480px;

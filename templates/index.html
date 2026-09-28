@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0f0f1a" />
-  <meta name="description" content="IIM Sambalpur MBA BA Term I Timetable PWA" />
+  <meta name="description" content="IIM Sambalpur MBA BA Term II Timetable PWA" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>IIM Sambalpur â€“ Timetable</title>
@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/css/style.css?v=3.2" />
+  <link rel="stylesheet" href="/static/css/style.css?v=3.3" />
 </head>
 <body>
   <!-- App Shell -->
@@ -204,12 +204,21 @@
 
         <!-- COURSES VIEW -->
         <section class="view" id="viewCourses">
+          <!-- Term II courses (always visible) -->
           <div class="courses-grid" id="coursesGrid">
             <div class="loading-skeleton">
               <div class="skeleton-card"></div>
               <div class="skeleton-card"></div>
               <div class="skeleton-card"></div>
             </div>
+          </div>
+          <!-- Term I collapsible section -->
+          <div class="term1-section" id="term1Section" style="display:none;">
+            <button class="term1-toggle" id="term1Toggle" onclick="toggleTerm1()">
+              <span class="term1-toggle-icon" id="term1Icon">▶</span>
+              <span>Show Term I Resources</span>
+            </button>
+            <div class="courses-grid term1-grid" id="term1Grid" style="display:none;"></div>
           </div>
         </section>
 
@@ -391,7 +400,7 @@
     </div>
   </div>
 
-  <script src="/static/js/app.js?v=3.2"></script>
+  <script src="/static/js/app.js?v=3.3"></script>
   <script>
     // Register PWA Service Worker
     if ('serviceWorker' in navigator) {
