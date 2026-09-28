@@ -829,6 +829,39 @@ async function saveNotifSettings() {
   }
 }
 
+// ─── RING ALERT (Web Audio API synthesised bell) ─────────────────────────────
+function playRingAlert() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function ring(freq, startTime, duration, gain) {
+      const osc = ctx.createOscillator();
+      const env = ctx.createGain();
+      osc.connect(env);
+      env.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+      env.gain.setValueAtTime(gain, startTime);
+      env.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    }
+
+    // Three-ding pattern: ding … ding … ding
+    const t = ctx.currentTime;
+    [0, 0.55, 1.1].forEach(offset => {
+      ring(880,  t + offset, 1.2, 0.5);   // fundamental A5
+      ring(1760, t + offset, 0.6, 0.15);  // 2nd harmonic
+      ring(2640, t + offset, 0.4, 0.07);  // 3rd harmonic
+    });
+
+    // Auto-close context after sound finishes
+    setTimeout(() => ctx.close(), 3000);
+  } catch (e) {
+    // Web Audio not available — silently skip
+  }
+}
+
 // Local notification scheduler (runs in-browser tab)
 function scheduleLocalNotifications() {
   clearTimeout(state.notifTimer);
@@ -877,6 +910,7 @@ function _scheduleClassNotifs(sessions, now, minsBefore) {
     const delay = alertTime - now;
     if (delay > 0 && delay < 8 * 60 * 60 * 1000) {
       setTimeout(() => {
+        playRingAlert();
         new Notification('Class Starting Soon! 📚', {
           body: `${s.subject_raw} starts in ${minsBefore} minutes`,
           icon: '/static/icons/icon-192.png',
@@ -904,6 +938,7 @@ async function sendMorningSummary(dateStr) {
     const body = count > 0
       ? `You have ${count} class${count > 1 ? 'es' : ''} today. First: ${classSessions[0]?.subject_raw}`
       : 'No classes today! Enjoy your day. 🎉';
+    playRingAlert();
     new Notification('Good Morning! 🌅', {
       body,
       icon: '/static/icons/icon-192.png',
