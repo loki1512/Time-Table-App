@@ -46,9 +46,12 @@ class Config:
     # ── Database ───────────────────────────────────────────────────────────────
     _db_url = os.environ.get('DATABASE_URL', 'sqlite:///timetable.db')
 
-    # Render / Heroku supply "postgres://" — SQLAlchemy requires "postgresql://"
+    # Render / Heroku supply "postgres://" — SQLAlchemy requires "postgresql+psycopg://"
+    # (psycopg v3 uses the +psycopg dialect prefix)
     if _db_url.startswith('postgres://'):
-        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+        _db_url = _db_url.replace('postgres://', 'postgresql+psycopg://', 1)
+    elif _db_url.startswith('postgresql://'):
+        _db_url = _db_url.replace('postgresql://', 'postgresql+psycopg://', 1)
 
     SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -63,6 +66,7 @@ class Config:
         'pool_pre_ping': True,
         **({'pool_size': 5, 'max_overflow': 10, 'pool_recycle': 300,
             'connect_args': {'sslmode': 'require'}} if _is_postgres else {})
+        # psycopg v3 accepts sslmode via connect_args the same as psycopg2
     }
 
     # ── Handy flag for runtime checks ─────────────────────────────────────────
