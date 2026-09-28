@@ -73,6 +73,35 @@ def update_session(session_id):
     if not session_obj:
         return jsonify({'error': 'Not found'}), 404
     data = request.get_json()
+    
+    # Track potential changes to date and slot
+    new_date = session_obj.date
+    if 'date' in data:
+        from datetime import date
+        try:
+            new_date = date.fromisoformat(data['date'])
+        except ValueError:
+            return jsonify({'error': 'Invalid date'}), 400
+            
+    new_slot = session_obj.slot
+    if 'slot' in data:
+        try:
+            new_slot = int(data['slot'])
+        except ValueError:
+            return jsonify({'error': 'Invalid slot'}), 400
+        if not TimeSlot.query.filter_by(slot_number=new_slot).first():
+            return jsonify({'error': 'Invalid slot'}), 400
+
+    # If date or slot is being changed, check for conflict
+    if new_date != session_obj.date or new_slot != session_obj.slot:
+        existing = ClassSession.query.filter_by(date=new_date, slot=new_slot).first()
+        if existing and existing.id != session_id:
+            return jsonify({'error': 'Session already exists for this date and slot'}), 409
+        
+        session_obj.date = new_date
+        session_obj.day_name = new_date.strftime('%A')
+        session_obj.slot = new_slot
+
     if 'subject_raw' in data:
         session_obj.subject_raw = data['subject_raw']
     if 'course_id' in data:
