@@ -1,6 +1,6 @@
 /* ─── IIM Sambalpur Timetable – Service Worker ───────────────────────────── */
 
-const CACHE_NAME = 'iim-timetable-v5';
+const CACHE_NAME = 'iim-timetable-v6';
 const STATIC_ASSETS = [
   '/',
   '/static/css/style.css',
@@ -89,6 +89,12 @@ self.addEventListener('push', event => {
       actions: data.actions || [],
       requireInteraction: false,
       silent: false,
+    }).then(() => {
+      // Tell open app windows to play the ring alert
+      return self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        .then(clientList => {
+          clientList.forEach(client => client.postMessage({ type: 'PLAY_RING' }));
+        });
     })
   );
 });

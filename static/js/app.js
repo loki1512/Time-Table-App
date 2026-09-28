@@ -13,6 +13,7 @@ const state = {
   allSessions: {},   // date -> [sessions]  (populated by prefetch)
   courses: [],
   notifTimer: null,
+  morningSentDate: null,       // date string when morning notif was last fired
 
   // Cache tracking
   sessionsCachedAt: null,      // timestamp of last full fetch
@@ -834,32 +835,50 @@ function playRingAlert() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
 
-    function ring(freq, startTime, duration, gain) {
-      const osc = ctx.createOscillator();
-      const env = ctx.createGain();
-      osc.connect(env);
-      env.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, startTime);
-      env.gain.setValueAtTime(gain, startTime);
-      env.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-      osc.start(startTime);
-      osc.stop(startTime + duration);
+    function _play() {
+      function ring(freq, startTime, duration, gain) {
+        const osc = ctx.createOscillator();
+        const env = ctx.createGain();
+        osc.connect(env);
+        env.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, startTime);
+        env.gain.setValueAtTime(gain, startTime);
+        env.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      }
+
+      // Three-ding pattern: ding … ding … ding
+      const t = ctx.currentTime;
+      [0, 0.55, 1.1].forEach(offset => {
+        ring(880,  t + offset, 1.2, 0.5);   // fundamental A5
+        ring(1760, t + offset, 0.6, 0.15);  // 2nd harmonic
+        ring(2640, t + offset, 0.4, 0.07);  // 3rd harmonic
+      });
+
+      // Auto-close context after sound finishes
+      setTimeout(() => ctx.close(), 3000);
     }
 
-    // Three-ding pattern: ding … ding … ding
-    const t = ctx.currentTime;
-    [0, 0.55, 1.1].forEach(offset => {
-      ring(880,  t + offset, 1.2, 0.5);   // fundamental A5
-      ring(1760, t + offset, 0.6, 0.15);  // 2nd harmonic
-      ring(2640, t + offset, 0.4, 0.07);  // 3rd harmonic
-    });
-
-    // Auto-close context after sound finishes
-    setTimeout(() => ctx.close(), 3000);
+    // Resume suspended AudioContext (browser suspends it when tab is in background)
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(_play);
+    } else {
+      _play();
+    }
   } catch (e) {
     // Web Audio not available — silently skip
   }
+}
+
+// Listen for ring requests from the Service Worker (push notifications)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data && event.data.type === 'PLAY_RING') {
+      playRingAlert();
+    }
+  });
 }
 
 // Local notification scheduler (runs in-browser tab)
@@ -876,11 +895,11 @@ function scheduleLocalNotifications() {
   const now = new Date();
   const todayStr = fmt(now);
 
-  // Check morning notification
+  // Check morning notification — only schedule if not yet sent today
   if (morningEnabled) {
     const [mh, mm] = morningTime.split(':').map(Number);
     const morningMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), mh, mm, 0) - now;
-    if (morningMs > 0 && morningMs < 24 * 60 * 60 * 1000) {
+    if (morningMs > 0 && morningMs < 24 * 60 * 60 * 1000 && state.morningSentDate !== todayStr) {
       setTimeout(() => sendMorningSummary(todayStr), morningMs);
     }
   }
@@ -924,6 +943,9 @@ function _scheduleClassNotifs(sessions, now, minsBefore) {
 }
 
 async function sendMorningSummary(dateStr) {
+  // Guard: only fire once per day per page session
+  if (state.morningSentDate === dateStr) return;
+  state.morningSentDate = dateStr;
   try {
     // Use cache if warm, otherwise fetch from API so we always have real data
     let sessions = getCachedSessions(dateStr);
