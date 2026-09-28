@@ -25,10 +25,10 @@ def _mark_synced():
 # ─── Constants ────────────────────────────────────────────────────────────────
 
 DEFAULT_SLOTS = [
-    {'slot_number': 1, 'label': '09:30 AM – 11:00 AM', 'start_time': '09:30', 'end_time': '11:00'},
-    {'slot_number': 2, 'label': '11:30 AM – 01:00 PM', 'start_time': '11:30', 'end_time': '13:00'},
-    {'slot_number': 3, 'label': '02:00 PM – 03:30 PM', 'start_time': '14:00', 'end_time': '15:30'},
-    {'slot_number': 4, 'label': '04:00 PM – 05:30 PM', 'start_time': '16:00', 'end_time': '17:30'},
+    {'slot_number': 1, 'label': '10:00 AM – 11:30 AM', 'start_time': '10:00', 'end_time': '11:30'},
+    {'slot_number': 2, 'label': '12:00 PM – 01:30 PM', 'start_time': '12:00', 'end_time': '13:30'},
+    {'slot_number': 3, 'label': '02:30 PM – 04:00 PM', 'start_time': '14:30', 'end_time': '16:00'},
+    {'slot_number': 4, 'label': '04:30 PM – 06:00 PM', 'start_time': '16:30', 'end_time': '18:00'},
 ]
 
 COURSE_COLORS = [
@@ -43,9 +43,14 @@ COURSE_COLORS = [
 ]
 
 COURSE_ABBR_MAP = {
+    # Term I
     'FRA': 'FRA', 'MM': 'MM', 'DS': 'DS-I', 'DS-I': 'DS-I',
     'MC': 'MC', 'MComp': 'MComp', 'OBD': 'OBD', 'BE': 'BE',
     'IBA': 'IBA',
+    # Term II
+    'BIDV': 'BIDV', 'DS II': 'DS-II', 'DSII': 'DS-II', 'DS-II': 'DS-II',
+    'ELCBA': 'ELCBA', 'ESG': 'ESG', 'FM': 'FM',
+    'HRM': 'HRM', 'ISBL': 'ISBL', 'OSCM': 'OSCM',
 }
 
 
@@ -60,12 +65,22 @@ def get_slots_dict():
 
 
 def seed_default_slots():
-    """Seed default time slots on first run."""
+    """Seed or update time slots to match DEFAULT_SLOTS (Term II timings)."""
     if TimeSlot.query.count() == 0:
         for d in DEFAULT_SLOTS:
             db.session.add(TimeSlot(**d))
         db.session.commit()
         print('[OK] Default time slots seeded.')
+    else:
+        # Update existing slots so Term II times are reflected
+        for d in DEFAULT_SLOTS:
+            slot = TimeSlot.query.filter_by(slot_number=d['slot_number']).first()
+            if slot:
+                slot.label = d['label']
+                slot.start_time = d['start_time']
+                slot.end_time = d['end_time']
+        db.session.commit()
+        print('[OK] Time slots updated to Term II schedule.')
 
 
 # ─── Course / Excel helpers ───────────────────────────────────────────────────
@@ -75,8 +90,10 @@ def parse_subject_abbr(text):
     if not text:
         return None
     text = text.strip()
-    for abbr in ['DS-I', 'MComp', 'FRA', 'MM', 'MC', 'OBD', 'BE', 'IBA']:
-        if text.upper().startswith(abbr.upper()) or f'{abbr}-' in text or f'{abbr} ' in text.upper():
+    # Check multi-word abbreviations first (order matters: longer/specific first)
+    for abbr in ['DS II', 'DS-II', 'DS-I', 'MComp', 'ELCBA', 'BIDV', 'OSCM',
+                 'ISBL', 'HRM', 'ESG', 'FM', 'FRA', 'MM', 'MC', 'OBD', 'BE', 'IBA']:
+        if text.upper().startswith(abbr.upper()) or f' {abbr} ' in f' {text.upper()} ':
             return abbr
     return text.split()[0] if text else None
 
@@ -117,8 +134,10 @@ def import_excel(source):
             continue
 
         short_map = {
+            # Term I courses
             'Business Economics': 'BE',
-            'Decision Sciences': 'DS-I',
+            'Decision Sciences-I': 'DS-I',
+            'Decision Sciences I': 'DS-I',
             'Financial Reporting': 'FRA',
             'Introduction to Business Analytics': 'IBA',
             'Managerial Communication': 'MC',
@@ -148,11 +167,45 @@ def import_excel(source):
 
     db.session.commit()
 
+    # ── Term II: seed courses that don't have a lookup table in the Excel ────
+    TERM_II_COURSES = [
+        {'short_name': 'BIDV',  'name': 'Business Intelligence and Data Visualisation', 'code': 'MBA-BA201', 'credits': 3.0, 'area': 'ISM',  'faculty': 'Prof. R Vivek Anand'},
+        {'short_name': 'DS-II', 'name': 'Decision Sciences-II',                         'code': 'MBA-BA202', 'credits': 3.0, 'area': 'OM',   'faculty': 'Prof. Harshad Sonar'},
+        {'short_name': 'DS II', 'name': 'Decision Sciences-II',                         'code': 'MBA-BA202', 'credits': 3.0, 'area': 'OM',   'faculty': 'Prof. Harshad Sonar'},
+        {'short_name': 'ELCBA', 'name': 'Emerging Legal Concepts for Business Analytics','code': 'MBA-BA203', 'credits': 1.5, 'area': 'GME',  'faculty': 'Prof. Rashmi Agrawal'},
+        {'short_name': 'ESG',   'name': 'Environmental, Social & Governance',           'code': 'MBA-BA204', 'credits': 1.5, 'area': 'GME',  'faculty': 'Prof. Sumita Sindhi'},
+        {'short_name': 'FM',    'name': 'Financial Management',                          'code': 'MBA-BA205', 'credits': 3.0, 'area': 'F&A',  'faculty': 'Prof. Garima Goel'},
+        {'short_name': 'HRM',   'name': 'Human Resource Management',                    'code': 'MBA-BA206', 'credits': 3.0, 'area': 'OBHR', 'faculty': 'Prof. Padmavathy Dhillon'},
+        {'short_name': 'ISBL',  'name': 'Indian Society, Business & Law',               'code': 'MBA-BA207', 'credits': 1.5, 'area': 'GME',  'faculty': ''},
+        {'short_name': 'OSCM',  'name': 'Operations & Supply Chain Management',         'code': 'MBA-BA208', 'credits': 3.0, 'area': 'OM',   'faculty': 'Prof. Ramakrushna Padhy'},
+    ]
+    for cd in TERM_II_COURSES:
+        existing = Course.query.filter_by(code=cd['code']).first()
+        if not existing:
+            course = Course(
+                code=cd['code'],
+                name=cd['name'],
+                credits=cd['credits'],
+                area=cd['area'],
+                faculty=cd['faculty'],
+                short_name=cd['short_name'],
+                color=COURSE_COLORS[course_color_idx % len(COURSE_COLORS)],
+            )
+            db.session.add(course)
+            db.session.flush()
+            course_color_idx += 1
+        else:
+            existing.faculty = cd['faculty'] or existing.faculty
+        courses_by_short[cd['short_name']] = existing or Course.query.filter_by(code=cd['code']).first()
+    db.session.commit()
+
     # Refresh courses_by_short from DB
     for c in Course.query.all():
         courses_by_short[c.short_name] = c
 
     # Column index → slot number (0-indexed cols)
+    # Term I:  cols 2,3,5,6 → slots 1,2,3,4  (09:30/11:30/14:00/16:00)
+    # Term II: cols 2,3,5,6 → slots 1,2,3,4  (10:00/12:00/14:30/16:30)
     col_to_slot = {2: 1, 3: 2, 5: 3, 6: 4}
 
     # Delete existing sessions before re-import
@@ -175,7 +228,11 @@ def import_excel(source):
             if not text:
                 continue
 
-            is_special = any(kw in text.upper() for kw in ['TERM', 'HOLIDAY', 'INDEPENDENCE', 'MILAD', 'BREAK', 'MID'])
+            is_special = any(kw in text.upper() for kw in [
+                'TERM', 'HOLIDAY', 'INDEPENDENCE', 'MILAD', 'BREAK', 'MID',
+                'DIWALI', 'DUSSHERA', 'GANDHI', 'GURU NANAK', 'MARMAGYA',
+                'INDUSTRY VISIT', 'END TERM',
+            ])
             abbr = parse_subject_abbr(text)
             course_obj = courses_by_short.get(abbr) if abbr else None
 

@@ -59,7 +59,7 @@ if __name__ == '__main__':
         create_default_admin()
 
         # Auto-import Excel on first run
-        excel_path = os.path.join(os.path.dirname(__file__), 'MBA BA 2026-28 Term I Schedule .xlsx')
+        excel_path = os.path.join(os.path.dirname(__file__), 'MBA BA 2026-28 Term II Schedule .xlsx')
         if os.path.exists(excel_path):
             from models import ClassSession
             if ClassSession.query.count() == 0:
