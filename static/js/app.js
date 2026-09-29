@@ -28,10 +28,10 @@ const SESSIONS_TTL_MS = 5 * 60 * 1000;   // 5 minutes
 const COURSES_TTL_MS  = 10 * 60 * 1000;  // 10 minutes
 
 const SLOT_TIMES = {
-  1: { start: '09:30', end: '11:00', label: '09:30 AM' },
-  2: { start: '11:30', end: '13:00', label: '11:30 AM' },
-  3: { start: '14:00', end: '15:30', label: '02:00 PM' },
-  4: { start: '16:00', end: '17:30', label: '04:00 PM' },
+  1: { start: '10:00', end: '11:30', label: '10:00 AM' },
+  2: { start: '12:00', end: '13:30', label: '12:00 PM' },
+  3: { start: '14:30', end: '16:00', label: '02:30 PM' },
+  4: { start: '16:30', end: '18:00', label: '04:30 PM' },
 };
 
 function fmt(d) {
