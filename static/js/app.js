@@ -384,6 +384,8 @@ function renderTodaySessions(sessions, now) {
     const faculty = s.course?.faculty || '';
     const credits = s.course?.credits ? `${s.course.credits} cr` : '';
     const area = s.course?.area || '';
+    const courseObj = s.course || (state.courses && s.subject_raw ? state.courses.find(c => c.short_name && s.subject_raw.toUpperCase().includes(c.short_name.toUpperCase())) : null);
+    const courseId = courseObj ? courseObj.id : null;
 
     return `
       <div class="session-card ${stateClass}" style="--course-color: ${color}">
@@ -403,6 +405,13 @@ function renderTodaySessions(sessions, now) {
             ${statusTag}
           </div>
           ${faculty ? `<div class="session-faculty">👤 ${escHtml(truncate(faculty, 60))}</div>` : ''}
+          ${courseId ? `
+            <div class="session-card-actions">
+              <button type="button" class="btn-course-classes" onclick="event.stopPropagation(); openCourseClassesModal(${courseId})" style="--btn-color:${color}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+                <span>View Course Classes</span>
+              </button>
+            </div>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -667,6 +676,7 @@ function renderCourses(courses) {
   function buildCards(list) {
     return list.map(c => {
       const hasLink = c.course_link && c.course_link.trim() !== '';
+      const safeLink = hasLink ? escHtml(c.course_link) : '';
       const cardContent = `
         <div class="course-abbr">${escHtml(c.short_name || c.code)}</div>
         <div class="course-name">${escHtml(c.name)}</div>
@@ -676,9 +686,15 @@ function renderCourses(courses) {
           <span class="course-tag">${escHtml(c.code)}</span>
         </div>
         ${c.faculty ? `<div class="course-faculty">👤 ${escHtml(c.faculty)}</div>` : ''}
-        ${hasLink ? `<div class="course-link-hint">View Course →</div>` : ''}`;
+        <div class="course-card-actions">
+          <button type="button" class="btn-course-classes" onclick="event.preventDefault(); event.stopPropagation(); openCourseClassesModal(${c.id})" style="--btn-color:${c.color}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+            <span>View Course Classes</span>
+          </button>
+          ${hasLink ? `<a class="course-link-hint" href="${safeLink}" target="_blank" rel="noopener" onclick="event.stopPropagation();"><span>View Course</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg></a>` : ''}
+        </div>`;
       if (hasLink) {
-        return `<a class="course-card course-card-link" href="${escHtml(c.course_link)}" target="_blank" rel="noopener" onclick="window.open(this.href, '_blank'); return false;" style="--course-color:${c.color}">${cardContent}</a>`;
+        return `<div class="course-card course-card-link" onclick="handleCourseCardClick(event, '${safeLink}')" style="--course-color:${c.color}">${cardContent}</div>`;
       }
       return `<div class="course-card" style="--course-color:${c.color}">${cardContent}</div>`;
     }).join('');
@@ -1237,3 +1253,270 @@ function toggleProfilePwd(inputId, btn) {
     ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
     : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
 }
+
+// ─── COURSE CLASSES MODAL FEATURE ─────────────────────────────────────────────
+let currentModalFilter = 'all';
+let currentModalSessions = [];
+let currentModalCourse = null;
+
+function handleCourseCardClick(e, link) {
+  if (e.target.closest('.btn-course-classes') || e.target.closest('.course-link-hint')) return;
+  if (link) window.open(link, '_blank', 'noopener');
+}
+
+function renderCourseClassesLoading(course) {
+  const overlay = el('courseClassesOverlay');
+  if (!overlay) return;
+
+  if (course) {
+    const titleEl = el('ccModalTitle');
+    const dotEl   = el('ccModalColorBar');
+    const codeEl  = el('ccModalCode');
+    const credEl  = el('ccModalCredits');
+    const facEl   = el('ccModalFaculty');
+    const areaEl  = el('ccModalArea');
+
+    if (titleEl) titleEl.textContent = course.name;
+    if (dotEl)   dotEl.style.background = course.color || 'var(--accent)';
+    if (codeEl)  codeEl.textContent = course.short_name || course.code;
+    if (credEl)  credEl.textContent = course.credits ? `${course.credits} Credits` : '';
+    if (facEl)   facEl.textContent = course.faculty ? `👤 ${course.faculty}` : '';
+    if (areaEl)  areaEl.textContent = course.area ? `· ${course.area}` : '';
+  }
+
+  const body = el('ccModalBody');
+  if (body) {
+    body.innerHTML = `
+      <div class="cc-empty-state">
+        <div class="cc-spinner"></div>
+        <div class="cc-empty-title">Loading classes…</div>
+        <div class="cc-empty-desc">Fetching full timetable schedule for this course.</div>
+      </div>`;
+  }
+}
+
+async function openCourseClassesModal(courseId) {
+  const overlay = el('courseClassesOverlay');
+  if (!overlay) return;
+
+  overlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
+
+  // Find course info
+  let course = (state.courses || []).find(c => c.id === courseId);
+
+  // If courses list is empty or course not found, ensure courses loaded
+  if (!course) {
+    await ensureCoursesLoaded().catch(() => {});
+    course = (state.courses || []).find(c => c.id === courseId);
+  }
+
+  // Show loading in body
+  renderCourseClassesLoading(course);
+
+  // Ensure full-term sessions are loaded
+  if (!state.sessionsCachedAt || Object.keys(state.allSessions).length === 0) {
+    await ensureSessionsLoaded().catch(() => {});
+  }
+
+  // If still no course object, attempt search in loaded sessions
+  if (!course) {
+    for (const d of Object.keys(state.allSessions)) {
+      const match = (state.allSessions[d] || []).find(s => s.course && s.course.id === courseId);
+      if (match) { course = match.course; break; }
+    }
+  }
+
+  if (!course) {
+    showToast('Course information not found', 'error');
+    closeCourseClassesModal();
+    return;
+  }
+
+  currentModalCourse = course;
+  currentModalFilter = 'all';
+
+  // Populate header
+  const titleEl = el('ccModalTitle');
+  const dotEl   = el('ccModalColorBar');
+  const codeEl  = el('ccModalCode');
+  const credEl  = el('ccModalCredits');
+  const facEl   = el('ccModalFaculty');
+  const areaEl  = el('ccModalArea');
+
+  if (titleEl) titleEl.textContent = course.name;
+  if (dotEl) {
+    dotEl.style.background = course.color || 'var(--accent)';
+    dotEl.style.boxShadow = `0 0 10px ${course.color || 'var(--accent)'}88`;
+  }
+  if (codeEl)  codeEl.textContent = course.short_name || course.code;
+  if (credEl)  credEl.textContent = course.credits ? `${course.credits} Credits` : '';
+  if (facEl)   facEl.textContent = course.faculty ? `👤 ${course.faculty}` : '';
+  if (areaEl)  areaEl.textContent = course.area ? `· ${course.area}` : '';
+
+  // Reset tab active state
+  document.querySelectorAll('.cc-tab').forEach(t => {
+    t.classList.toggle('active', t.getAttribute('data-filter') === 'all');
+  });
+
+  // Filter sessions for this course
+  const allDates = Object.keys(state.allSessions).sort();
+  const matched = [];
+  const courseShort = (course.short_name || '').toUpperCase();
+  const courseCode = (course.code || '').toUpperCase();
+
+  allDates.forEach(dateStr => {
+    const list = state.allSessions[dateStr] || [];
+    list.forEach(s => {
+      let isMatch = false;
+      if (s.course && s.course.id === courseId) {
+        isMatch = true;
+      } else if (!s.course && s.subject_raw) {
+        const raw = s.subject_raw.toUpperCase();
+        if ((courseShort && raw.includes(courseShort)) || (courseCode && raw.includes(courseCode))) {
+          isMatch = true;
+        }
+      }
+      if (isMatch) {
+        matched.push({ ...s, dateStr });
+      }
+    });
+  });
+
+  // Sort chronologically by date and slot
+  matched.sort((a, b) => {
+    if (a.dateStr !== b.dateStr) return a.dateStr.localeCompare(b.dateStr);
+    return (a.slot || 0) - (b.slot || 0);
+  });
+
+  currentModalSessions = matched;
+
+  // Compute stats
+  const todayStr = fmt(new Date());
+  const completedCount = matched.filter(s => s.dateStr < todayStr).length;
+  const upcomingCount = matched.filter(s => s.dateStr >= todayStr).length;
+
+  if (el('ccTotalCount'))     el('ccTotalCount').textContent = matched.length;
+  if (el('ccCompletedCount')) el('ccCompletedCount').textContent = completedCount;
+  if (el('ccUpcomingCount'))  el('ccUpcomingCount').textContent = upcomingCount;
+
+  renderCourseClassesList();
+}
+
+function filterCourseClasses(filterType) {
+  currentModalFilter = filterType;
+  document.querySelectorAll('.cc-tab').forEach(t => {
+    t.classList.toggle('active', t.getAttribute('data-filter') === filterType);
+  });
+  renderCourseClassesList();
+}
+
+function renderCourseClassesList() {
+  const body = el('ccModalBody');
+  if (!body) return;
+
+  const todayStr = fmt(new Date());
+  let filtered = currentModalSessions;
+
+  if (currentModalFilter === 'upcoming') {
+    filtered = currentModalSessions.filter(s => s.dateStr >= todayStr);
+  } else if (currentModalFilter === 'completed') {
+    filtered = currentModalSessions.filter(s => s.dateStr < todayStr);
+  }
+
+  if (filtered.length === 0) {
+    let emptyMsg = 'No sessions scheduled for this course in the loaded timetable.';
+    if (currentModalFilter === 'upcoming') emptyMsg = 'No upcoming sessions scheduled for this course.';
+    if (currentModalFilter === 'completed') emptyMsg = 'No completed sessions yet for this course.';
+
+    body.innerHTML = `
+      <div class="cc-empty-state">
+        <div class="cc-empty-icon">📅</div>
+        <div class="cc-empty-title">No classes found</div>
+        <div class="cc-empty-desc">${emptyMsg}</div>
+      </div>`;
+    return;
+  }
+
+  // Group by Month
+  const byMonth = {};
+  filtered.forEach(s => {
+    const d = toLocalDate(s.dateStr);
+    const mKey = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    if (!byMonth[mKey]) byMonth[mKey] = [];
+    byMonth[mKey].push(s);
+  });
+
+  let html = '';
+  let overallIdx = 1;
+
+  Object.entries(byMonth).forEach(([month, list]) => {
+    html += `
+      <div class="cc-month-group">
+        <div class="cc-month-header">
+          <span>${month}</span>
+          <span class="cc-month-count">${list.length} session${list.length !== 1 ? 's' : ''}</span>
+        </div>`;
+
+    list.forEach(s => {
+      const d = toLocalDate(s.dateStr);
+      const isPast = s.dateStr < todayStr;
+      const isToday = s.dateStr === todayStr;
+      const st = SLOT_TIMES[s.slot] || {};
+
+      const weekday = d.toLocaleDateString('en-IN', { weekday: 'short' });
+      const dayNum = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+      const dateDisplay = `${weekday}, ${dayNum}`;
+
+      const timeRange = st.start && st.end ? `${formatTime(st.start)} – ${formatTime(st.end)}` : (st.label || `Slot ${s.slot}`);
+
+      let statusHtml = '';
+      let rowClass = '';
+      if (isToday) {
+        statusHtml = '<span class="cc-status-pill status-today">Today</span>';
+        rowClass = 'cc-today';
+      } else if (isPast) {
+        statusHtml = '<span class="cc-status-pill status-completed">Completed</span>';
+        rowClass = 'cc-past';
+      } else {
+        statusHtml = '<span class="cc-status-pill status-upcoming">Upcoming</span>';
+        rowClass = 'cc-upcoming';
+      }
+
+      const sessionTitle = escHtml(s.subject_raw || (currentModalCourse ? currentModalCourse.name : 'Class'));
+
+      html += `
+        <div class="cc-class-row ${rowClass}">
+          <div class="cc-class-num">#${overallIdx++}</div>
+          <div class="cc-row-left">
+            <div class="cc-date-str">${dateDisplay}</div>
+            <div class="cc-slot-info">Slot ${s.slot}</div>
+          </div>
+          <div class="cc-row-main">
+            <div class="cc-session-title" title="${sessionTitle}">${sessionTitle}</div>
+            <div class="cc-session-time">${timeRange}</div>
+            ${s.notes ? `<div class="cc-session-notes">📝 ${escHtml(s.notes)}</div>` : ''}
+          </div>
+          ${statusHtml}
+        </div>`;
+    });
+
+    html += `</div>`;
+  });
+
+  body.innerHTML = html;
+}
+
+function closeCourseClassesModal() {
+  const overlay = el('courseClassesOverlay');
+  if (overlay) overlay.classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+// Close on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeCourseClassesModal();
+  }
+});
+

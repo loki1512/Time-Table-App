@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/css/style.css?v=3.3" />
+  <link rel="stylesheet" href="/static/css/style.css?v=3.4" />
 </head>
 <body>
   <!-- App Shell -->
@@ -400,7 +400,7 @@
     </div>
   </div>
 
-  <script src="/static/js/app.js?v=3.6"></script>
+  <script src="/static/js/app.js?v=3.7"></script>
   <script>
     // Register PWA Service Worker
     if ('serviceWorker' in navigator) {
@@ -439,6 +439,56 @@
     </p>
     <div class="disclaimer-footer-note">You won't see this again on this device.</div>
     <button class="disclaimer-btn" id="disclaimerGotIt" onclick="dismissDisclaimer()">Got it, thanks!</button>
+  </div>
+
+  <!-- ── Course Classes Modal ────────────────────────────────────────────── -->
+  <div id="courseClassesOverlay" class="modal-overlay" onclick="closeCourseClassesModal()" role="dialog" aria-modal="true" aria-labelledby="ccModalTitle">
+    <div class="course-classes-modal" onclick="event.stopPropagation()">
+      <div class="cc-modal-header">
+        <div class="cc-header-main">
+          <div class="cc-badge-wrap">
+            <span class="cc-color-bar" id="ccModalColorBar"></span>
+            <span class="cc-code-badge" id="ccModalCode"></span>
+            <span class="cc-credits-badge" id="ccModalCredits"></span>
+          </div>
+          <h3 class="cc-title" id="ccModalTitle">Course Classes</h3>
+          <div class="cc-meta-row">
+            <span class="cc-faculty" id="ccModalFaculty"></span>
+            <span class="cc-area" id="ccModalArea"></span>
+          </div>
+        </div>
+        <button type="button" class="cc-close-btn" onclick="closeCourseClassesModal()" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="cc-stats-bar">
+        <div class="cc-stat-item">
+          <span class="cc-stat-count" id="ccTotalCount">0</span>
+          <span class="cc-stat-label">Total Classes</span>
+        </div>
+        <div class="cc-stat-divider"></div>
+        <div class="cc-stat-item">
+          <span class="cc-stat-count cc-stat-completed" id="ccCompletedCount">0</span>
+          <span class="cc-stat-label">Completed</span>
+        </div>
+        <div class="cc-stat-divider"></div>
+        <div class="cc-stat-item">
+          <span class="cc-stat-count cc-stat-upcoming" id="ccUpcomingCount">0</span>
+          <span class="cc-stat-label">Upcoming</span>
+        </div>
+      </div>
+
+      <div class="cc-filter-tabs">
+        <button type="button" class="cc-tab active" data-filter="all" onclick="filterCourseClasses('all')">All Classes</button>
+        <button type="button" class="cc-tab" data-filter="upcoming" onclick="filterCourseClasses('upcoming')">Upcoming</button>
+        <button type="button" class="cc-tab" data-filter="completed" onclick="filterCourseClasses('completed')">Completed</button>
+      </div>
+
+      <div class="cc-modal-body" id="ccModalBody">
+        <!-- Classes rendered dynamically -->
+      </div>
+    </div>
   </div>
 </body>
 </html>
