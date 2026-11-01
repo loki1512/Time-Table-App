@@ -252,30 +252,39 @@ async function deleteSession(id) {
   }
 }
 
-// â”€â”€â”€ COURSES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── COURSES ─────────────────────────────────────────────────────────────────
+// Courses are stored in _coursesCache keyed by ID so that Edit/Delete
+// buttons pass only a plain numeric ID — no JSON serialised into HTML.
+let _coursesCache = {};
+let editingCourseId = null;
+
 async function loadAdminCourses() {
   try {
     const courses = await api('/api/courses');
+    // Rebuild lookup cache
+    _coursesCache = {};
+    courses.forEach(c => { _coursesCache[c.id] = c; });
+
     if (courses.length === 0) {
-      el('adminCoursesGrid').innerHTML = '<div class="loading-text">No courses found.</div>';
+      el('adminCoursesGrid').innerHTML = '<div class="loading-text">No courses found. Click "+ Add Course" to create one.</div>';
       return;
     }
     el('adminCoursesGrid').innerHTML = courses.map(c => `
-      <div class="admin-course-card">
+      <div class="admin-course-card" data-course-id="${c.id}">
         <div class="acc-color-bar" style="background:${c.color}"></div>
         <div class="acc-body">
           <div class="acc-short" style="color:${c.color}">${escHtml(c.short_name || c.code)}</div>
           <div class="acc-name">${escHtml(c.name)}</div>
           <div class="acc-meta">
-            <span class="acc-tag">${c.credits} credits</span>
+            <span class="acc-tag">${c.credits} cr</span>
             ${c.area ? `<span class="acc-tag">${escHtml(c.area)}</span>` : ''}
             <span class="acc-tag">${escHtml(c.code)}</span>
-            ${c.course_link ? `<a class="acc-tag acc-link-tag" href="${escHtml(c.course_link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">ðŸ”— Course Page</a>` : ''}
+            ${c.course_link ? `<a class="acc-tag acc-link-tag" href="${escHtml(c.course_link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">&#128279; Course Page</a>` : ''}
           </div>
-          <div class="acc-faculty">${c.faculty ? escHtml(c.faculty) : 'â€”'}</div>
+          <div class="acc-faculty">${c.faculty ? escHtml(c.faculty) : '&mdash;'}</div>
           <div class="acc-actions">
-            <button class="acc-edit-btn" onclick="openEditCourseModal(${JSON.stringify(c).replace(/"/g,'&quot;')})">Edit</button>
-            <button class="acc-del-btn" onclick="deleteCourse(${c.id})">Delete</button>
+            <button class="acc-edit-btn" onclick="openEditCourseModal(${c.id})">&#9998; Edit</button>
+            <button class="acc-del-btn"  onclick="deleteCourse(${c.id})">&#128465; Delete</button>
           </div>
         </div>
       </div>`).join('');
@@ -283,8 +292,6 @@ async function loadAdminCourses() {
     el('adminCoursesGrid').innerHTML = `<div class="loading-text">Error: ${err.message}</div>`;
   }
 }
-
-let editingCourseId = null;
 
 function openAddCourseModal() {
   editingCourseId = null;
@@ -300,22 +307,27 @@ function openAddCourseModal() {
   el('courseColor').value = '#2952CC';
   buildColorPresets();
   el('courseModalOverlay').classList.add('show');
+  setTimeout(() => el('courseCode').focus(), 60);
 }
 
-function openEditCourseModal(c) {
+// Accepts a numeric course ID and looks it up from _coursesCache.
+function openEditCourseModal(id) {
+  const c = _coursesCache[id];
+  if (!c) { showToast('Course data not found \u2014 try refreshing', 'error'); return; }
   editingCourseId = c.id;
   el('courseModalTitle').textContent = 'Edit Course';
   el('courseId').value = c.id;
   el('courseCode').value = c.code || '';
   el('courseShortName').value = c.short_name || '';
   el('courseName').value = c.name || '';
-  el('courseCredits').value = c.credits || 3;
+  el('courseCredits').value = c.credits ?? 3;
   el('courseArea').value = c.area || '';
   el('courseFaculty').value = c.faculty || '';
   el('courseLinkUrl').value = c.course_link || '';
   el('courseColor').value = c.color || '#2952CC';
   buildColorPresets(c.color);
   el('courseModalOverlay').classList.add('show');
+  setTimeout(() => el('courseShortName').focus(), 60);
 }
 
 function closeCourseModal() { el('courseModalOverlay').classList.remove('show'); }
@@ -337,24 +349,31 @@ function selectColor(color, el) {
 
 async function saveCourse() {
   const btn = el('courseSaveBtn');
+  const code = el('courseCode').value.trim();
+  const name = el('courseName').value.trim();
+  if (!code || !name) {
+    showToast('Code and Full Name are required', 'error');
+    return;
+  }
   btn.disabled = true;
+  btn.textContent = 'Saving...';
   const data = {
-    code: el('courseCode').value,
-    short_name: el('courseShortName').value,
-    name: el('courseName').value,
-    credits: parseFloat(el('courseCredits').value),
-    area: el('courseArea').value,
-    faculty: el('courseFaculty').value,
+    code,
+    short_name: el('courseShortName').value.trim(),
+    name,
+    credits: parseFloat(el('courseCredits').value) || 3,
+    area: el('courseArea').value.trim(),
+    faculty: el('courseFaculty').value.trim(),
     color: el('courseColor').value,
     course_link: el('courseLinkUrl').value.trim() || '',
   };
   try {
     if (editingCourseId) {
       await api(`/api/courses/${editingCourseId}`, { method: 'PUT', body: JSON.stringify(data) });
-      showToast('Course updated', 'success');
+      showToast('Course updated \u2713', 'success');
     } else {
       await api('/api/courses', { method: 'POST', body: JSON.stringify(data) });
-      showToast('Course created', 'success');
+      showToast('Course created \u2713', 'success');
     }
     closeCourseModal();
     loadAdminCourses();
@@ -362,11 +381,14 @@ async function saveCourse() {
     showToast(err.message, 'error');
   } finally {
     btn.disabled = false;
+    btn.textContent = 'Save';
   }
 }
 
 async function deleteCourse(id) {
-  if (!confirm('Delete this course? Sessions using it will lose the course link.')) return;
+  const c = _coursesCache[id];
+  const label = c ? `"${c.short_name || c.code}"` : 'this course';
+  if (!confirm(`Delete ${label}? Sessions using it will lose the course link.`)) return;
   try {
     await api(`/api/courses/${id}`, { method: 'DELETE' });
     showToast('Course deleted', 'success');
