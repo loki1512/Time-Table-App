@@ -407,7 +407,7 @@ function renderTodaySessions(sessions, now) {
           ${faculty ? `<div class="session-faculty">👤 ${escHtml(truncate(faculty, 60))}</div>` : ''}
           ${courseId ? `
             <div class="session-card-actions">
-              <button type="button" class="btn-course-classes" onclick="event.stopPropagation(); openCourseClassesModal(${courseId})" style="--btn-color:${color}">
+              <button type="button" class="btn-course-classes" onclick="openCourseClassesModal(${courseId})" style="--btn-color:${color}">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
                 <span>View Course Classes</span>
               </button>
@@ -677,26 +677,28 @@ function renderCourses(courses) {
     return list.map(c => {
       const hasLink = c.course_link && c.course_link.trim() !== '';
       const safeLink = hasLink ? escHtml(c.course_link) : '';
-      const cardContent = `
-        <div class="course-abbr">${escHtml(c.short_name || c.code)}</div>
-        <div class="course-name">${escHtml(c.name)}</div>
-        <div class="course-meta">
-          <span class="course-tag">${c.credits} cr</span>
-          ${c.area ? `<span class="course-tag">${escHtml(c.area)}</span>` : ''}
-          <span class="course-tag">${escHtml(c.code)}</span>
-        </div>
-        ${c.faculty ? `<div class="course-faculty">👤 ${escHtml(c.faculty)}</div>` : ''}
-        <div class="course-card-actions">
-          <button type="button" class="btn-course-classes" onclick="event.preventDefault(); event.stopPropagation(); openCourseClassesModal(${c.id})" style="--btn-color:${c.color}">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
-            <span>View Course Classes</span>
-          </button>
-          ${hasLink ? `<a class="course-link-hint" href="${safeLink}" target="_blank" rel="noopener" onclick="event.stopPropagation();"><span>View Course</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg></a>` : ''}
+      return `
+        <div class="course-card" style="--course-color:${c.color}">
+          <div class="course-abbr">${escHtml(c.short_name || c.code)}</div>
+          <div class="course-name">${escHtml(c.name)}</div>
+          <div class="course-meta">
+            <span class="course-tag">${c.credits} cr</span>
+            ${c.area ? `<span class="course-tag">${escHtml(c.area)}</span>` : ''}
+            <span class="course-tag">${escHtml(c.code)}</span>
+          </div>
+          ${c.faculty ? `<div class="course-faculty">👤 ${escHtml(c.faculty)}</div>` : ''}
+          <div class="course-card-actions">
+            <button type="button" class="btn-course-classes" onclick="openCourseClassesModal(${c.id})" style="--btn-color:${c.color}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+              <span>View Course Classes</span>
+            </button>
+            ${hasLink ? `
+            <a class="btn-course-page" href="${safeLink}" target="_blank" rel="noopener">
+              <span>Course Page</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+            </a>` : ''}
+          </div>
         </div>`;
-      if (hasLink) {
-        return `<div class="course-card course-card-link" onclick="handleCourseCardClick(event, '${safeLink}')" style="--course-color:${c.color}">${cardContent}</div>`;
-      }
-      return `<div class="course-card" style="--course-color:${c.color}">${cardContent}</div>`;
     }).join('');
   }
 
@@ -1259,11 +1261,6 @@ let currentModalFilter = 'all';
 let currentModalSessions = [];
 let currentModalCourse = null;
 
-function handleCourseCardClick(e, link) {
-  if (e.target.closest('.btn-course-classes') || e.target.closest('.course-link-hint')) return;
-  if (link) window.open(link, '_blank', 'noopener');
-}
-
 function renderCourseClassesLoading(course) {
   const overlay = el('courseClassesOverlay');
   if (!overlay) return;
@@ -1302,13 +1299,17 @@ async function openCourseClassesModal(courseId) {
   overlay.classList.add('show');
   document.body.style.overflow = 'hidden';
 
+  const targetId = Number(courseId);
+
   // Find course info
-  let course = (state.courses || []).find(c => c.id === courseId);
+  let course = (state.courses || []).find(c => Number(c.id) === targetId || String(c.id) === String(courseId));
 
   // If courses list is empty or course not found, ensure courses loaded
   if (!course) {
-    await ensureCoursesLoaded().catch(() => {});
-    course = (state.courses || []).find(c => c.id === courseId);
+    try {
+      await ensureCoursesLoaded();
+      course = (state.courses || []).find(c => Number(c.id) === targetId || String(c.id) === String(courseId));
+    } catch (e) {}
   }
 
   // Show loading in body
@@ -1316,13 +1317,28 @@ async function openCourseClassesModal(courseId) {
 
   // Ensure full-term sessions are loaded
   if (!state.sessionsCachedAt || Object.keys(state.allSessions).length === 0) {
-    await ensureSessionsLoaded().catch(() => {});
+    try {
+      await ensureSessionsLoaded();
+    } catch (e) {}
+  }
+
+  // Double check if allSessions is still empty (e.g. if prefetch was interrupted)
+  if (Object.keys(state.allSessions).length === 0) {
+    try {
+      const sessions = await api('/api/sessions?start=2026-07-01&end=2026-12-31');
+      state.allSessions = {};
+      sessions.forEach(s => {
+        if (!state.allSessions[s.date]) state.allSessions[s.date] = [];
+        state.allSessions[s.date].push(s);
+      });
+      state.sessionsCachedAt = Date.now();
+    } catch (e) {}
   }
 
   // If still no course object, attempt search in loaded sessions
   if (!course) {
     for (const d of Object.keys(state.allSessions)) {
-      const match = (state.allSessions[d] || []).find(s => s.course && s.course.id === courseId);
+      const match = (state.allSessions[d] || []).find(s => s.course && (Number(s.course.id) === targetId || String(s.course.id) === String(courseId)));
       if (match) { course = match.course; break; }
     }
   }
@@ -1369,7 +1385,7 @@ async function openCourseClassesModal(courseId) {
     const list = state.allSessions[dateStr] || [];
     list.forEach(s => {
       let isMatch = false;
-      if (s.course && s.course.id === courseId) {
+      if (s.course && (Number(s.course.id) === targetId || String(s.course.id) === String(courseId))) {
         isMatch = true;
       } else if (!s.course && s.subject_raw) {
         const raw = s.subject_raw.toUpperCase();

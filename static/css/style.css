@@ -1353,26 +1353,53 @@ a.course-card-link:hover .course-link-hint {
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.course-card.course-card-link {
-  cursor: pointer;
-}
-
-.course-card-link .course-link-hint {
-  margin-top: 0;
-  font-size: 12px;
+/* "Course Page" Button (direct link) */
+.btn-course-page {
   display: inline-flex;
-  gap: 4px;
-  transition: opacity 0.2s, transform 0.2s;
+  align-items: center;
+  gap: 6px;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.32);
+  color: var(--accent-3);
+  font-size: 12px;
+  font-weight: 600;
+  min-height: 34px;
+  padding: 0 13px;
+  border-radius: 20px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--transition), border-color var(--transition), color var(--transition), transform var(--transition);
+  line-height: 1.2;
 }
 
-.course-card-link .course-link-hint:hover {
-  opacity: 1;
-  transform: translateX(2px);
+.btn-course-page svg {
+  color: var(--accent-3);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-course-page:hover {
+  background: rgba(212, 175, 55, 0.24);
+  border-color: rgba(212, 175, 55, 0.55);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.btn-course-page:hover svg {
+  transform: translate(1px, -1px);
+}
+
+.btn-course-page:active {
+  transform: translateY(0);
+}
+
+.btn-course-classes *,
+.btn-course-page * {
+  pointer-events: none;
 }
 
 /* Term I (collapsed archive) */
@@ -2321,7 +2348,7 @@ a.course-card-link:hover .course-link-hint {
 
 .profile-drawer-overlay.show {
   opacity: 1;
-  pointer-events: all;
+  pointer-events: auto;
 }
 
 .profile-drawer {
@@ -2446,7 +2473,7 @@ a.course-card-link:hover .course-link-hint {
 
 .disclaimer-backdrop.show {
   opacity: 1;
-  pointer-events: all;
+  pointer-events: auto;
 }
 
 .disclaimer-sheet {
@@ -2556,22 +2583,24 @@ a.course-card-link:hover .course-link-hint {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(5, 13, 26, 0.78);
+  background: rgba(5, 13, 26, 0.82);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  z-index: 1200;
+  z-index: 99999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 
 .modal-overlay.show {
   opacity: 1;
-  pointer-events: all;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .course-classes-modal {
@@ -2999,10 +3028,12 @@ a.course-card-link:hover .course-link-hint {
   }
 
   .course-classes-modal {
-    max-height: 90vh;
-    max-height: 90dvh;
+    width: 100%;
+    max-height: 88vh;
+    max-height: 88dvh;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     margin-top: auto;
+    overscroll-behavior: contain;
   }
 
   .cc-modal-header {
@@ -3014,7 +3045,9 @@ a.course-card-link:hover .course-link-hint {
   }
 
   .cc-modal-body {
-    padding: 14px 16px calc(20px + env(safe-area-inset-bottom));
+    padding: 14px 16px calc(24px + env(safe-area-inset-bottom));
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .cc-class-row {
