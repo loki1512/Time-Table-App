@@ -290,6 +290,120 @@ def api_slots():
     return jsonify([s.to_dict() for s in slots])
 
 
+
+# ─── Class Notes API ──────────────────────────────────────────────────────────
+
+@main_bp.route('/api/courses/<int:course_id>/ended-sessions')
+@login_required
+def api_course_ended_sessions(course_id):
+    """Return sessions that have ended by date (strictly before today)."""
+    from datetime import date
+    today = date.today()
+    sessions = ClassSession.query.filter(
+        ClassSession.course_id == course_id,
+        ClassSession.date < today,
+        ClassSession.is_special == False,
+    ).order_by(ClassSession.date.desc(), ClassSession.slot).all()
+    return jsonify([s.to_dict() for s in sessions])
+
+
+@main_bp.route('/api/sessions/<int:session_id>/notes')
+@login_required
+def api_get_session_notes(session_id):
+    """Return public notes + current user's own note for a session."""
+    from models import ClassNote
+    notes = ClassNote.query.filter(
+        ClassNote.session_id == session_id,
+        db.or_(
+            ClassNote.is_public == True,
+            ClassNote.user_id == current_user.id,
+        )
+    ).order_by(ClassNote.created_at).all()
+    return jsonify([n.to_dict(current_user_id=current_user.id) for n in notes])
+
+
+@main_bp.route('/api/sessions/<int:session_id>/notes', methods=['POST'])
+@login_required
+def api_create_session_note(session_id):
+    """Create a note for a session."""
+    from models import ClassNote
+    from datetime import date
+
+    session_obj = db.session.get(ClassSession, session_id)
+    if not session_obj:
+        return jsonify({'error': 'Session not found'}), 404
+
+    # Notes are available only after the class date has ended.
+    today = date.today()
+    if session_obj.date >= today:
+        return jsonify({'error': 'Notes are available after the session date'}), 403
+
+    data = request.get_json() or {}
+    raw_content = data.get('content')
+    if not isinstance(raw_content, str):
+        return jsonify({'error': 'Note content must be text'}), 400
+    content = raw_content.strip()
+    if not content:
+        return jsonify({'error': 'Note content cannot be empty'}), 400
+    if len(content) > 1000:
+        return jsonify({'error': 'Note exceeds 1000 character limit'}), 400
+
+    note = ClassNote(
+        session_id=session_id,
+        user_id=current_user.id,
+        content=content,
+        is_public=bool(data.get('is_public', False)),
+    )
+    db.session.add(note)
+    db.session.commit()
+    return jsonify(note.to_dict(current_user_id=current_user.id)), 201
+
+
+@main_bp.route('/api/notes/<int:note_id>', methods=['PUT'])
+@login_required
+def api_update_note(note_id):
+    """Edit own note."""
+    from models import ClassNote
+    note = db.session.get(ClassNote, note_id)
+    if not note:
+        return jsonify({'error': 'Note not found'}), 404
+    if note.user_id != current_user.id:
+        return jsonify({'error': 'You can only edit your own notes'}), 403
+
+    data = request.get_json() or {}
+    if 'content' in data:
+        if not isinstance(data['content'], str):
+            return jsonify({'error': 'Note content must be text'}), 400
+        content = data['content'].strip()
+        if not content:
+            return jsonify({'error': 'Note content cannot be empty'}), 400
+        if len(content) > 1000:
+            return jsonify({'error': 'Note exceeds 1000 character limit'}), 400
+        note.content = content
+    if 'is_public' in data:
+        note.is_public = bool(data['is_public'])
+
+    from datetime import datetime
+    note.updated_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify(note.to_dict(current_user_id=current_user.id))
+
+
+@main_bp.route('/api/notes/<int:note_id>', methods=['DELETE'])
+@login_required
+def api_delete_note(note_id):
+    """Delete own note (or admin can delete any note)."""
+    from models import ClassNote
+    note = db.session.get(ClassNote, note_id)
+    if not note:
+        return jsonify({'error': 'Note not found'}), 404
+    if note.user_id != current_user.id and not current_user.is_admin:
+        return jsonify({'error': 'You can only delete your own notes'}), 403
+    db.session.delete(note)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 # ─── Notification API (personal, any logged-in user) ─────────────────────────
 
 @main_bp.route('/api/notifications/vapid-public-key')

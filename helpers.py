@@ -221,8 +221,12 @@ def import_excel(source):
     # Term II: cols 2,3,5,6 → slots 1,2,3,4  (10:00/12:00/14:30/16:30)
     col_to_slot = {2: 1, 3: 2, 5: 3, 6: 4}
 
-    # Delete existing sessions before re-import
-    ClassSession.query.delete()
+    # ── Upsert sessions (immutable once started) ──────────────────────────────
+    from datetime import date as _date
+    today = _date.today()
+
+    # Build set of (date, slot) from new Excel for cleanup pass later
+    new_excel_keys = set()
 
     for row in ws.iter_rows(min_row=4, max_row=ws.max_row, values_only=True):
         if row[0] is None:
@@ -249,15 +253,40 @@ def import_excel(source):
             abbr = parse_subject_abbr(text)
             course_obj = courses_by_short.get(abbr) if abbr else None
 
-            session_obj = ClassSession(
-                date=date_val,
-                day_name=day_name,
-                slot=slot_num,
-                subject_raw=text,
-                course_id=course_obj.id if course_obj else None,
-                is_special=is_special,
-            )
-            db.session.add(session_obj)
+            new_excel_keys.add((date_val, slot_num))
+
+            # A session is "locked" (immutable) if its date is strictly before today
+            is_locked = date_val < today
+
+            existing = ClassSession.query.filter_by(date=date_val, slot=slot_num).first()
+
+            if existing:
+                if is_locked:
+                    # Already happened — never touch it
+                    continue
+                # Future session: update schedule metadata only (preserve admin notes)
+                existing.subject_raw = text
+                existing.course_id   = course_obj.id if course_obj else None
+                existing.is_special  = is_special
+                existing.day_name    = day_name
+            else:
+                # New session: insert
+                session_obj = ClassSession(
+                    date=date_val,
+                    day_name=day_name,
+                    slot=slot_num,
+                    subject_raw=text,
+                    course_id=course_obj.id if course_obj else None,
+                    is_special=is_special,
+                )
+                db.session.add(session_obj)
+
+    # Remove future sessions that no longer appear in the new Excel
+    # (Only safe to remove sessions that haven't started yet)
+    future_sessions = ClassSession.query.filter(ClassSession.date >= today).all()
+    for s in future_sessions:
+        if (s.date, s.slot) not in new_excel_keys:
+            db.session.delete(s)
 
     db.session.commit()
     _mark_synced()

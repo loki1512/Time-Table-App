@@ -3130,3 +3130,247 @@ a.course-card-link:hover .course-link-hint {
     color: #000;
   }
 }
+
+
+/* ─── COURSE NOTES FEATURE ─────────────────────────────────────────────────── */
+
+/* "View Notes" button on course cards — sits between "View Course Classes" and "Course Page" */
+.btn-course-notes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1.5px solid color-mix(in srgb, var(--btn-color, var(--accent)) 35%, transparent);
+  background: color-mix(in srgb, var(--btn-color, var(--accent)) 10%, transparent);
+  color: var(--btn-color, var(--accent));
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, transform 0.12s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.btn-course-notes:hover {
+  background: color-mix(in srgb, var(--btn-color, var(--accent)) 20%, transparent);
+  border-color: color-mix(in srgb, var(--btn-color, var(--accent)) 60%, transparent);
+  transform: translateY(-1px);
+}
+.btn-course-notes:active { transform: translateY(0); }
+
+/* Subtitle below header in Course Notes modal */
+.cn-modal-subtitle {
+  padding: 0 20px 10px;
+  font-size: 12px;
+  color: var(--text-3);
+  font-style: italic;
+}
+
+/* Session rows in Course Notes modal — make them clickable */
+.cn-session-row {
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+}
+.cn-session-row:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+/* "Notes" pill shown at the right of each session row */
+.cn-view-notes-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Class Notes Modal: Create/Edit Form ────────────────────────────────────── */
+.cn-create-form {
+  margin: 0 16px 0;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2, rgba(255,255,255,0.03));
+  overflow: hidden;
+}
+.cn-form-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+}
+.cn-textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 12px 14px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-1);
+  font-size: 13.5px;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.cn-textarea::placeholder { color: var(--text-3); }
+
+.cn-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px 10px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.cn-char-counter {
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.cn-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.cn-public-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.cn-public-checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.cn-public-text {
+  font-size: 12px;
+  color: var(--text-2);
+  font-weight: 500;
+}
+.cn-save-btn {
+  padding: 7px 18px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s, transform 0.12s;
+}
+.cn-save-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+.cn-save-btn:active { transform: translateY(0); }
+.cn-save-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ── Notes list section label ───────────────────────────────────────────────── */
+.cn-section-label {
+  padding: 14px 20px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* ── Individual note card ───────────────────────────────────────────────────── */
+.cn-note-card {
+  margin: 8px 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2, rgba(255,255,255,0.03));
+}
+.cn-note-public {
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
+}
+.cn-note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cn-note-author {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.cn-author-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cn-author-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.cn-public-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  letter-spacing: 0.03em;
+}
+.cn-note-date {
+  font-size: 11px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+.cn-note-content {
+  font-size: 13.5px;
+  color: var(--text-1);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.cn-note-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  justify-content: flex-end;
+}
+.cn-note-action-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+.cn-note-action-btn:hover { background: var(--surface-3, rgba(255,255,255,0.08)); color: var(--text-1); }
+.cn-note-action-btn.delete { color: var(--error, #ef4444); border-color: color-mix(in srgb, var(--error, #ef4444) 30%, transparent); }
+.cn-note-action-btn.delete:hover { background: color-mix(in srgb, var(--error, #ef4444) 12%, transparent); }

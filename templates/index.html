@@ -490,6 +490,74 @@
       </div>
     </div>
   </div>
+
+  <!-- ── Course Notes Modal (Ended Sessions List) ─────────────────────── -->
+  <div id="courseNotesOverlay" class="modal-overlay" onclick="if(event.target===this)closeCourseNotesModal()" role="dialog" aria-modal="true" aria-labelledby="cnModalTitle">
+    <div class="course-classes-modal">
+      <div class="cc-modal-header">
+        <div class="cc-header-main">
+          <div class="cc-badge-wrap">
+            <span class="cc-color-bar" id="cnModalColorBar"></span>
+            <span class="cc-code-badge" id="cnModalCode"></span>
+          </div>
+          <h3 class="cc-title" id="cnModalTitle">Course Notes</h3>
+          <div class="cc-meta-row">
+            <span class="cc-faculty" id="cnModalFaculty"></span>
+          </div>
+        </div>
+        <button type="button" class="cc-close-btn" onclick="closeCourseNotesModal()" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="cn-modal-subtitle">Select a class to view or add notes</div>
+      <div class="cc-modal-body" id="cnModalBody">
+        <!-- Sessions rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Class Notes Modal (Notes for a Session) ───────────────────────── -->
+  <div id="classNotesOverlay" class="modal-overlay" onclick="if(event.target===this)closeClassNotesModal()" role="dialog" aria-modal="true">
+    <div class="course-classes-modal">
+      <div class="cc-modal-header">
+        <div class="cc-header-main">
+          <div class="cc-badge-wrap">
+            <span class="cc-color-bar" id="csnColorBar"></span>
+            <span class="cc-code-badge" id="csnSessionDate"></span>
+          </div>
+          <h3 class="cc-title" id="csnSessionTitle">Class Notes</h3>
+          <div class="cc-meta-row">
+            <span class="cc-faculty" id="csnSessionTime"></span>
+          </div>
+        </div>
+        <button type="button" class="cc-close-btn" onclick="closeClassNotesModal()" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <!-- Create Note Form -->
+      <div class="cn-create-form" id="csnCreateForm">
+        <div class="cn-form-header" id="csnFormHeader">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span id="csnFormTitle">My Note</span>
+        </div>
+        <textarea id="csnNoteTextarea" class="cn-textarea" placeholder="Write your class notes here… (max 1000 characters)" maxlength="1000" oninput="updateCharCounter()"></textarea>
+        <div class="cn-form-footer">
+          <span class="cn-char-counter" id="csnCharCounter">0 / 1000</span>
+          <div class="cn-form-actions">
+            <label class="cn-public-label">
+              <input type="checkbox" id="csnIsPublic" class="cn-public-checkbox" />
+              <span class="cn-public-text">Make it public</span>
+            </label>
+            <button type="button" class="cn-save-btn" id="csnSaveBtn" onclick="saveClassNote()">Save Note</button>
+          </div>
+        </div>
+      </div>
+      <!-- Notes List -->
+      <div class="cc-modal-body" id="csnNotesBody">
+        <!-- Notes rendered dynamically -->
+      </div>
+    </div>
+  </div>
 </body>
 </html>
 

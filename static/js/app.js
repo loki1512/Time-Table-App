@@ -692,6 +692,10 @@ function renderCourses(courses) {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
               <span>View Course Classes</span>
             </button>
+            <button type="button" class="btn-course-notes" onclick="openCourseNotesModal(${c.id})" style="--btn-color:${c.color}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <span>View Notes</span>
+            </button>
             ${hasLink ? `
             <a class="btn-course-page" href="${safeLink}" target="_blank" rel="noopener">
               <span>Course Page</span>
@@ -1536,3 +1540,294 @@ document.addEventListener('keydown', e => {
   }
 });
 
+
+
+// ─── COURSE NOTES MODAL ─────────────────────────────────────────────────────
+let currentNotesCourse = null;
+let currentNotesSession = null;
+let csnEditingNoteId = null;
+
+async function openCourseNotesModal(courseId) {
+  const overlay = el('courseNotesOverlay');
+  if (!overlay) return;
+  overlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
+
+  // Find course info
+  let course = (state.courses || []).find(c => Number(c.id) === Number(courseId));
+  if (!course) {
+    try { await ensureCoursesLoaded(); course = (state.courses || []).find(c => Number(c.id) === Number(courseId)); } catch(e) {}
+  }
+  if (!course) { showToast('Course not found', 'error'); closeCourseNotesModal(); return; }
+
+  currentNotesCourse = course;
+
+  // Populate header
+  const colorBar = el('cnModalColorBar');
+  if (colorBar) { colorBar.style.background = course.color || 'var(--accent)'; colorBar.style.boxShadow = `0 0 10px ${course.color || 'var(--accent)'}88`; }
+  if (el('cnModalCode')) el('cnModalCode').textContent = course.short_name || course.code;
+  if (el('cnModalTitle')) el('cnModalTitle').textContent = course.name + ' — Notes';
+  if (el('cnModalFaculty')) el('cnModalFaculty').textContent = course.faculty ? `👤 ${course.faculty}` : '';
+
+  // Load ended sessions
+  const body = el('cnModalBody');
+  body.innerHTML = `<div class="cc-empty-state"><div class="cc-spinner"></div><div class="cc-empty-title">Loading classes…</div></div>`;
+
+  try {
+    const sessions = await api(`/api/courses/${courseId}/ended-sessions`);
+    renderEndedSessionsList(sessions, course);
+  } catch (err) {
+    body.innerHTML = `<div class="cc-empty-state"><div class="cc-empty-icon">⚠️</div><div class="cc-empty-title">Failed to load</div><div class="cc-empty-desc">${err.message}</div></div>`;
+  }
+}
+
+function renderEndedSessionsList(sessions, course) {
+  const body = el('cnModalBody');
+  if (!body) return;
+  if (!sessions || sessions.length === 0) {
+    body.innerHTML = `<div class="cc-empty-state"><div class="cc-empty-icon">📝</div><div class="cc-empty-title">No completed classes yet</div><div class="cc-empty-desc">Notes will appear here once classes have taken place.</div></div>`;
+    return;
+  }
+
+  // Group by month
+  const byMonth = {};
+  sessions.forEach(s => {
+    const d = toLocalDate(s.date);
+    const mKey = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    if (!byMonth[mKey]) byMonth[mKey] = [];
+    byMonth[mKey].push(s);
+  });
+
+  let html = '';
+  let idx = 1;
+  Object.entries(byMonth).forEach(([month, list]) => {
+    html += `<div class="cc-month-group"><div class="cc-month-header"><span>${month}</span><span class="cc-month-count">${list.length} class${list.length !== 1 ? 'es' : ''}</span></div>`;
+    list.forEach(s => {
+      const d = toLocalDate(s.date);
+      const weekday = d.toLocaleDateString('en-IN', { weekday: 'short' });
+      const dayNum  = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+      const st = SLOT_TIMES[s.slot] || {};
+      const timeRange = st.start && st.end ? `${formatTime(st.start)} – ${formatTime(st.end)}` : `Slot ${s.slot}`;
+      const title = escHtml(s.subject_raw || (course ? course.name : 'Class'));
+      html += `
+        <div class="cc-class-row cn-session-row" onclick="openClassNotesModal(${s.id}, ${JSON.stringify({date: s.date, slot: s.slot, subject_raw: s.subject_raw, course: s.course}).replace(/"/g, '&quot;')})">
+          <div class="cc-class-num">#${idx++}</div>
+          <div class="cc-row-left">
+            <div class="cc-date-str">${weekday}, ${dayNum}</div>
+            <div class="cc-slot-info">${timeRange}</div>
+          </div>
+          <div class="cc-row-main">
+            <div class="cc-session-title">${title}</div>
+          </div>
+          <div class="cn-view-notes-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Notes
+          </div>
+        </div>`;
+    });
+    html += `</div>`;
+  });
+  body.innerHTML = html;
+}
+
+function closeCourseNotesModal() {
+  const overlay = el('courseNotesOverlay');
+  if (overlay) overlay.classList.remove('show');
+  document.body.style.overflow = '';
+  currentNotesCourse = null;
+}
+
+// ─── CLASS NOTES MODAL ───────────────────────────────────────────────────────
+
+async function openClassNotesModal(sessionId, sessionInfo) {
+  const overlay = el('classNotesOverlay');
+  if (!overlay) return;
+  overlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
+
+  currentNotesSession = { id: sessionId, ...sessionInfo };
+  csnEditingNoteId = null;
+
+  // Populate session header
+  const course = sessionInfo.course || currentNotesCourse;
+  const colorBar = el('csnColorBar');
+  if (colorBar) colorBar.style.background = (course && course.color) ? course.color : 'var(--accent)';
+
+  const d = toLocalDate(sessionInfo.date);
+  const weekday = d.toLocaleDateString('en-IN', { weekday: 'short' });
+  const dayNum  = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (el('csnSessionDate')) el('csnSessionDate').textContent = `${weekday}, ${dayNum}`;
+  if (el('csnSessionTitle')) el('csnSessionTitle').textContent = escHtml(sessionInfo.subject_raw || (course ? course.name : 'Class Notes'));
+
+  const st = SLOT_TIMES[sessionInfo.slot] || {};
+  const timeRange = st.start && st.end ? `${formatTime(st.start)} – ${formatTime(st.end)}` : `Slot ${sessionInfo.slot}`;
+  if (el('csnSessionTime')) el('csnSessionTime').textContent = timeRange;
+
+  // Reset form to create mode
+  resetNoteForm();
+
+  // Load notes
+  await loadClassNotes(sessionId);
+}
+
+function resetNoteForm() {
+  csnEditingNoteId = null;
+  if (el('csnNoteTextarea')) el('csnNoteTextarea').value = '';
+  if (el('csnIsPublic')) el('csnIsPublic').checked = false;
+  if (el('csnCharCounter')) el('csnCharCounter').textContent = '0 / 1000';
+  if (el('csnFormTitle')) el('csnFormTitle').textContent = 'My Note';
+  if (el('csnSaveBtn')) el('csnSaveBtn').textContent = 'Save Note';
+}
+
+function updateCharCounter() {
+  const ta = el('csnNoteTextarea');
+  const counter = el('csnCharCounter');
+  if (!ta || !counter) return;
+  const len = ta.value.length;
+  counter.textContent = `${len} / 1000`;
+  counter.style.color = len > 950 ? 'var(--error, #ef4444)' : 'var(--text-3)';
+}
+
+async function loadClassNotes(sessionId) {
+  const body = el('csnNotesBody');
+  if (!body) return;
+  body.innerHTML = `<div class="cc-empty-state"><div class="cc-spinner"></div></div>`;
+
+  try {
+    const notes = await api(`/api/sessions/${sessionId}/notes`);
+    window._classNotesCache = notes;
+    renderClassNotesList(notes);
+  } catch (err) {
+    body.innerHTML = `<div class="cc-empty-state"><div class="cc-empty-icon">⚠️</div><div class="cc-empty-title">Failed to load notes</div></div>`;
+  }
+}
+
+function renderClassNotesList(notes) {
+  const body = el('csnNotesBody');
+  if (!body) return;
+
+  const myNotes = notes.filter(n => n.is_mine);
+  const myNote = myNotes[0];
+  const otherNotes = notes.filter(n => !n.is_mine);
+
+  if (notes.length === 0 && !myNote) {
+    body.innerHTML = `<div class="cc-empty-state"><div class="cc-empty-icon">📝</div><div class="cc-empty-title">No notes yet</div><div class="cc-empty-desc">Be the first to add a note for this class!</div></div>`;
+    return;
+  }
+
+  let html = '';
+
+  // Public notes from other users
+  if (otherNotes.length > 0) {
+    html += `<div class="cn-section-label">📢 Public Notes</div>`;
+    otherNotes.forEach(n => {
+      const dt = new Date(n.created_at);
+      const dateStr = dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      html += `
+        <div class="cn-note-card cn-note-public">
+          <div class="cn-note-header">
+            <div class="cn-note-author">
+              <span class="cn-author-avatar">${escHtml(n.username[0].toUpperCase())}</span>
+              <span class="cn-author-name">${escHtml(n.username)}</span>
+              <span class="cn-public-badge">Public</span>
+            </div>
+            <span class="cn-note-date">${dateStr}</span>
+          </div>
+          <div class="cn-note-content">${escHtml(n.content)}</div>
+        </div>`;
+    });
+  }
+
+  if (myNotes.length) {
+    const ownHtml = myNotes.map(n => {
+      const dateStr = new Date(n.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      return `<div class="cn-note-card ${n.is_public ? 'cn-note-public' : ''}"><div class="cn-note-header"><div class="cn-note-author"><span class="cn-author-name">You</span><span class="cn-public-badge">${n.is_public ? 'Public' : 'Private'}</span></div><span class="cn-note-date">${dateStr}</span></div><div class="cn-note-content">${escHtml(n.content)}</div><div class="cn-note-actions"><button type="button" class="cn-note-action-btn" onclick="editClassNote(${n.id})">Edit</button><button type="button" class="cn-note-action-btn delete" onclick="deleteClassNote(${n.id})">Delete</button></div></div>`;
+    }).join('');
+    html = `<div class="cn-section-label">My Notes</div>${ownHtml}${html}`;
+  }
+
+  if (html === '' && notes.length === 0) {
+    html = `<div class="cc-empty-state"><div class="cc-empty-icon">📝</div><div class="cc-empty-title">No public notes from others</div><div class="cc-empty-desc">Write a note above to share with classmates!</div></div>`;
+  }
+
+  body.innerHTML = html || `<div class="cc-empty-state"><div class="cc-empty-icon">📝</div><div class="cc-empty-title">No notes yet</div><div class="cc-empty-desc">Be the first to add a note!</div></div>`;
+}
+
+function editClassNote(noteId) {
+  const note = (window._classNotesCache || []).find(n => n.id === noteId);
+  if (!note) return;
+  csnEditingNoteId = note.id;
+  el('csnNoteTextarea').value = note.content;
+  el('csnIsPublic').checked = note.is_public;
+  el('csnFormTitle').textContent = 'Edit Note';
+  el('csnSaveBtn').textContent = 'Update Note';
+  updateCharCounter();
+  el('csnNoteTextarea').focus();
+}
+
+async function saveClassNote() {
+  const content = (el('csnNoteTextarea').value || '').trim();
+  if (!content) { showToast('Note cannot be empty', 'error'); return; }
+  if (content.length > 1000) { showToast('Note exceeds 1000 characters', 'error'); return; }
+
+  const isPublic = el('csnIsPublic').checked;
+  const btn = el('csnSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    if (csnEditingNoteId) {
+      // Update existing note
+      await api(`/api/notes/${csnEditingNoteId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ content, is_public: isPublic }),
+      });
+      showToast('Note updated!', 'success');
+    } else {
+      // Create new note
+      await api(`/api/sessions/${currentNotesSession.id}/notes`, {
+        method: 'POST',
+        body: JSON.stringify({ content, is_public: isPublic }),
+      });
+      showToast('Note saved!', 'success');
+    }
+    csnEditingNoteId = null;
+    resetNoteForm();
+    await loadClassNotes(currentNotesSession.id);
+  } catch (err) {
+    showToast(err.message, 'error');
+    btn.disabled = false;
+    btn.textContent = csnEditingNoteId ? 'Update Note' : 'Save Note';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function deleteClassNote(noteId) {
+  if (!confirm('Delete this note?')) return;
+  try {
+    await api(`/api/notes/${noteId}`, { method: 'DELETE' });
+    showToast('Note deleted', 'success');
+    csnEditingNoteId = null;
+    resetNoteForm();
+    await loadClassNotes(currentNotesSession.id);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function closeClassNotesModal() {
+  const overlay = el('classNotesOverlay');
+  if (overlay) overlay.classList.remove('show');
+  document.body.style.overflow = el('courseNotesOverlay')?.classList.contains('show') ? 'hidden' : '';
+  currentNotesSession = null;
+  csnEditingNoteId = null;
+}
+
+// Extend Escape key handler for new modals
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (el('classNotesOverlay')?.classList.contains('show')) { closeClassNotesModal(); return; }
+    if (el('courseNotesOverlay')?.classList.contains('show')) { closeCourseNotesModal(); return; }
+  }
+});

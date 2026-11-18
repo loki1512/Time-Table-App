@@ -143,6 +143,34 @@ class TimeSlot(db.Model):
         }
 
 
+# ─── ClassNote ────────────────────────────────────────────────────────────────
+
+class ClassNote(db.Model):
+    id         = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('class_session.id', ondelete='CASCADE'), nullable=False)
+    user_id    = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    content    = db.Column(db.Text, nullable=False)
+    is_public  = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    session = db.relationship('ClassSession', backref='class_notes')
+    author  = db.relationship('User', backref='class_notes')
+
+    def to_dict(self, current_user_id=None):
+        return {
+            'id':         self.id,
+            'session_id': self.session_id,
+            'user_id':    self.user_id,
+            'username':   self.author.username,
+            'content':    self.content,
+            'is_public':  self.is_public,
+            'is_mine':    self.user_id == current_user_id,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
+        }
+
+
 # ─── User Loader ──────────────────────────────────────────────────────────────
 
 @login_manager.user_loader
