@@ -386,6 +386,8 @@ function renderTodaySessions(sessions, now) {
     const area = s.course?.area || '';
     const courseObj = s.course || (state.courses && s.subject_raw ? state.courses.find(c => c.short_name && s.subject_raw.toUpperCase().includes(c.short_name.toUpperCase())) : null);
     const courseId = courseObj ? courseObj.id : null;
+    const canTakeNotes = !s.is_special && (state.todayOffset < 0 || (state.todayOffset === 0 && stateClass !== 'upcoming'));
+    const notesInfo = JSON.stringify({date: s.date, slot: s.slot, subject_raw: s.subject_raw, course: courseObj}).replace(/"/g, '&quot;');
 
     return `
       <div class="session-card ${stateClass}" style="--course-color: ${color}">
@@ -405,12 +407,13 @@ function renderTodaySessions(sessions, now) {
             ${statusTag}
           </div>
           ${faculty ? `<div class="session-faculty">👤 ${escHtml(truncate(faculty, 60))}</div>` : ''}
-          ${courseId ? `
+          ${(courseId || canTakeNotes) ? `
             <div class="session-card-actions">
-              <button type="button" class="btn-course-classes" onclick="openCourseClassesModal(${courseId})" style="--btn-color:${color}">
+              ${courseId ? `<button type="button" class="btn-course-classes" onclick="openCourseClassesModal(${courseId})" style="--btn-color:${color}">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
                 <span>View Course Classes</span>
-              </button>
+              </button>` : ''}
+              ${canTakeNotes ? `<button type="button" class="btn-course-notes" onclick="openClassNotesModal(${s.id}, ${notesInfo})" style="--btn-color:${color}"><span>Take Notes</span></button>` : ''}
             </div>` : ''}
         </div>
       </div>`;
@@ -1483,6 +1486,11 @@ function renderCourseClassesList() {
       const isPast = s.dateStr < todayStr;
       const isToday = s.dateStr === todayStr;
       const st = SLOT_TIMES[s.slot] || {};
+      const now = new Date();
+      const slotStart = st.start ? st.start.split(':').map(Number) : null;
+      const hasStartedToday = isToday && slotStart && (now.getHours() * 60 + now.getMinutes()) >= slotStart[0] * 60 + slotStart[1];
+      const canTakeNotes = !s.is_special && (isPast || hasStartedToday);
+      const noteSessionInfo = JSON.stringify({date: s.dateStr, slot: s.slot, subject_raw: s.subject_raw, course: s.course || currentModalCourse}).replace(/"/g, '&quot;');
 
       const weekday = d.toLocaleDateString('en-IN', { weekday: 'short' });
       const dayNum = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
@@ -1518,6 +1526,7 @@ function renderCourseClassesList() {
             ${s.notes ? `<div class="cc-session-notes">📝 ${escHtml(s.notes)}</div>` : ''}
           </div>
           ${statusHtml}
+          ${canTakeNotes ? `<button type="button" class="btn-course-notes cc-notes-action" onclick="openClassNotesModal(${s.id}, ${noteSessionInfo})" style="--btn-color:${currentModalCourse?.color || 'var(--accent)'}" aria-label="Take notes for this class">Take Notes</button>` : ''}
         </div>`;
     });
 

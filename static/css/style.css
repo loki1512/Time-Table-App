@@ -3191,6 +3191,11 @@ a.course-card-link:hover .course-link-hint {
   flex-shrink: 0;
 }
 
+.cc-notes-action {
+  flex-shrink: 0;
+  align-self: center;
+}
+
 /* ── Class Notes Modal: Create/Edit Form ────────────────────────────────────── */
 .cn-create-form {
   margin: 0 16px 0;

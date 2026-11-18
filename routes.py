@@ -325,18 +325,24 @@ def api_get_session_notes(session_id):
 @main_bp.route('/api/sessions/<int:session_id>/notes', methods=['POST'])
 @login_required
 def api_create_session_note(session_id):
-    """Create a note for a session."""
+    """Create a note after a session has started or concluded."""
     from models import ClassNote
-    from datetime import date
+    from datetime import date, datetime
 
     session_obj = db.session.get(ClassSession, session_id)
     if not session_obj:
         return jsonify({'error': 'Session not found'}), 404
 
-    # Notes are available only after the class date has ended.
+    # Past dates are concluded; on today's date, allow notes once the slot starts.
     today = date.today()
-    if session_obj.date >= today:
-        return jsonify({'error': 'Notes are available after the session date'}), 403
+    if session_obj.date > today:
+        return jsonify({'error': 'Notes are available after the class starts'}), 403
+    if session_obj.date == today:
+        from helpers import get_slots_dict
+        slot = get_slots_dict().get(session_obj.slot)
+        now = datetime.now().strftime('%H:%M')
+        if not slot or now < slot['start']:
+            return jsonify({'error': 'Notes are available after the class starts'}), 403
 
     data = request.get_json() or {}
     raw_content = data.get('content')
