@@ -84,6 +84,8 @@ class ClassSession(db.Model):
     date = db.Column(db.Date, nullable=False)
     day_name = db.Column(db.String(20))
     slot = db.Column(db.Integer, nullable=False)    # 1=9:30AM, 2=11:30AM, 3=2:00PM, 4=4:00PM
+    start_time = db.Column(db.String(5), nullable=True)  # Optional session-specific HH:MM
+    end_time = db.Column(db.String(5), nullable=True)
     subject_raw = db.Column(db.String(300))         # raw text from Excel / edited
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=True)
     course = db.relationship('Course', backref='sessions')
@@ -95,12 +97,21 @@ class ClassSession(db.Model):
     def to_dict(self):
         slot_obj = TimeSlot.query.filter_by(slot_number=self.slot).first()
         slot_time = slot_obj.start_time if slot_obj else ''
+        effective_start = self.start_time or (slot_obj.start_time if slot_obj else '')
+        effective_end = self.end_time or (slot_obj.end_time if slot_obj else '')
+        is_off_slot = bool(
+            self.start_time and self.end_time and slot_obj and
+            (self.start_time != slot_obj.start_time or self.end_time != slot_obj.end_time)
+        )
         return {
             'id': self.id,
             'date': self.date.isoformat(),
             'day_name': self.day_name,
             'slot': self.slot,
             'slot_time': slot_time,
+            'start_time': effective_start,
+            'end_time': effective_end,
+            'is_off_slot': is_off_slot,
             'subject_raw': self.subject_raw,
             'course': self.course.to_dict() if self.course else None,
             'is_special': self.is_special,

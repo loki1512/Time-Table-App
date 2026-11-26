@@ -365,6 +365,14 @@ def api_create_session_note(session_id):
     return jsonify(note.to_dict(current_user_id=current_user.id)), 201
 
 
+@main_bp.route('/api/export_timetable')
+def api_export_timetable():
+    """Export timetable as JSON for external use."""
+    from helpers import export_timetable_json
+    data = export_timetable_json()
+    return jsonify(data)
+
+
 @main_bp.route('/api/notes/<int:note_id>', methods=['PUT'])
 @login_required
 def api_update_note(note_id):

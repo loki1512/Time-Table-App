@@ -34,6 +34,29 @@ const SLOT_TIMES = {
   4: { start: '16:30', end: '18:00', label: '04:30 PM' },
 };
 
+function sessionTimes(session) {
+  const fallback = SLOT_TIMES[session?.slot] || {};
+  return {
+    start: session?.start_time || fallback.start || '',
+    end: session?.end_time || fallback.end || '',
+    label: fallback.label || '',
+  };
+}
+
+function sessionTimeRange(session) {
+  const times = sessionTimes(session);
+  return times.start && times.end
+    ? `${formatTime(times.start)} – ${formatTime(times.end)}`
+    : (times.label || `Slot ${session?.slot ?? ''}`);
+}
+
+function sessionStartMinutes(session) {
+  const start = sessionTimes(session).start;
+  if (!start) return (Number(session?.slot) || 0) * 1440;
+  const [hour, minute] = start.split(':').map(Number);
+  return hour * 60 + minute;
+}
+
 function fmt(d) {
   if (!d) return '';
   if (typeof d === 'string') return d.split('T')[0];
@@ -290,6 +313,7 @@ function jumpToToday() {
 function loadToday() { loadDay(state.todayOffset); }
 
 function renderTodaySessions(sessions, now) {
+  sessions = [...sessions].sort((a, b) => sessionStartMinutes(a) - sessionStartMinutes(b));
   const countEl = el('classCount');
   const realSessions = sessions.filter(s => !s.is_special);
   countEl.textContent = realSessions.length;
@@ -317,7 +341,7 @@ function renderTodaySessions(sessions, now) {
   const nowMins = now.getHours() * 60 + now.getMinutes();
 
   sessions.forEach(s => {
-    const st = SLOT_TIMES[s.slot];
+    const st = sessionTimes(s);
     if (!st) return;
     const [sh, sm] = st.start.split(':').map(Number);
     const [eh, em] = st.end.split(':').map(Number);
@@ -350,7 +374,7 @@ function renderTodaySessions(sessions, now) {
 
   // Render session cards
   el('todaySessions').innerHTML = sessions.map(s => {
-    const st = SLOT_TIMES[s.slot] || {};
+    const st = sessionTimes(s);
     let stateClass = 'upcoming';
     let statusTag = '';
 
@@ -387,21 +411,19 @@ function renderTodaySessions(sessions, now) {
     const courseObj = s.course || (state.courses && s.subject_raw ? state.courses.find(c => c.short_name && s.subject_raw.toUpperCase().includes(c.short_name.toUpperCase())) : null);
     const courseId = courseObj ? courseObj.id : null;
     const canTakeNotes = !s.is_special && (state.todayOffset < 0 || (state.todayOffset === 0 && stateClass !== 'upcoming'));
-    const notesInfo = JSON.stringify({date: s.date, slot: s.slot, subject_raw: s.subject_raw, course: courseObj}).replace(/"/g, '&quot;');
+    const notesInfo = JSON.stringify({date: s.date, slot: s.slot, start_time: s.start_time, end_time: s.end_time, is_off_slot: s.is_off_slot, subject_raw: s.subject_raw, course: courseObj}).replace(/"/g, '&quot;');
 
     return `
-      <div class="session-card ${stateClass}" style="--course-color: ${color}">
+      <div class="session-card ${stateClass}${s.is_off_slot ? ' off-slot-session' : ''}" style="--course-color: ${color}">
         <div class="session-time-col">
-          <div class="session-time-slot">Slot ${s.slot}</div>
-          <div class="session-time">${formatTime(st.start)}</div>
-          <div class="session-sep">↓</div>
-          <div class="session-time">${formatTime(st.end)}</div>
+          <div class="session-time-slot">${sessionTimeRange(s)}</div>
         </div>
         <div class="session-body">
           <div class="session-subject">${escHtml(s.subject_raw || 'Class')}</div>
           <div class="session-meta">
             ${s.course ? `<span class="session-badge" style="background:${color}22;color:${color};border-color:${color}44">${escHtml(s.course.short_name)}</span>` : ''}
             ${s.is_special ? '<span class="session-badge special-badge">Special</span>' : ''}
+            ${s.is_off_slot ? '<span class="session-badge off-slot-badge">Off-slot</span>' : ''}
             ${credits ? `<span class="session-badge" style="background:none">${credits}</span>` : ''}
             ${area ? `<span class="session-badge" style="background:none">${area}</span>` : ''}
             ${statusTag}
@@ -421,7 +443,7 @@ function renderTodaySessions(sessions, now) {
 }
 
 function updateCountdown(session, now) {
-  const st = SLOT_TIMES[session.slot];
+  const st = sessionTimes(session);
   if (!st) return;
   const [sh, sm] = st.start.split(':').map(Number);
   const targetMins = sh * 60 + sm;
@@ -505,13 +527,13 @@ function renderWeek(sessions, mon, sun, today) {
 
     const sessionsHtml = daySessions.length === 0
       ? '<div class="week-no-class">No classes</div>'
-      : daySessions.map(s => {
-          const st = SLOT_TIMES[s.slot] || {};
+      : [...daySessions].sort((a, b) => sessionStartMinutes(a) - sessionStartMinutes(b)).map(s => {
+          const st = sessionTimes(s);
           const color = s.course?.color || '#6366f1';
           return `
-            <div class="week-session-item" style="--course-color:${color}">
-              <div class="week-session-time">${formatTime(st.start)}</div>
-              <div class="week-session-subject">${escHtml(s.subject_raw || 'Class')}</div>
+            <div class="week-session-item${s.is_off_slot ? ' off-slot-session' : ''}" style="--course-color:${color}">
+              <div class="week-session-time">${sessionTimeRange(s)}</div>
+              <div class="week-session-subject">${escHtml(s.subject_raw || 'Class')}${s.is_off_slot ? '<span class="off-slot-mark">Off-slot</span>' : ''}</div>
             </div>`;
         }).join('');
 
@@ -624,13 +646,13 @@ function showCalDay(dateStr) {
   if (sessions.length === 0) {
     el('calDetailSessions').innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-desc">No sessions on this day.</div></div>';
   } else {
-    el('calDetailSessions').innerHTML = sessions.map(s => {
-      const st = SLOT_TIMES[s.slot] || {};
+    el('calDetailSessions').innerHTML = [...sessions].sort((a, b) => sessionStartMinutes(a) - sessionStartMinutes(b)).map(s => {
+      const st = sessionTimes(s);
       const color = s.course?.color || '#6366f1';
       return `
-        <div class="week-session-item" style="--course-color:${color}">
-          <div class="week-session-time">${formatTime(st.start)}</div>
-          <div class="week-session-subject">${escHtml(s.subject_raw || 'Class')}</div>
+        <div class="week-session-item${s.is_off_slot ? ' off-slot-session' : ''}" style="--course-color:${color}">
+          <div class="week-session-time">${sessionTimeRange(s)}</div>
+          <div class="week-session-subject">${escHtml(s.subject_raw || 'Class')}${s.is_off_slot ? '<span class="off-slot-mark">Off-slot</span>' : ''}</div>
         </div>`;
     }).join('');
   }
@@ -946,7 +968,7 @@ function scheduleLocalNotifications() {
 function _scheduleClassNotifs(sessions, now, minsBefore) {
   sessions.forEach(s => {
     if (s.is_special) return;
-    const st = SLOT_TIMES[s.slot];
+    const st = sessionTimes(s);
     if (!st) return;
     const [sh, sm] = st.start.split(':').map(Number);
     const classTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), sh, sm, 0);
@@ -1409,7 +1431,7 @@ async function openCourseClassesModal(courseId) {
   // Sort chronologically by date and slot
   matched.sort((a, b) => {
     if (a.dateStr !== b.dateStr) return a.dateStr.localeCompare(b.dateStr);
-    return (a.slot || 0) - (b.slot || 0);
+    return sessionStartMinutes(a) - sessionStartMinutes(b);
   });
 
   currentModalSessions = matched;
@@ -1485,18 +1507,18 @@ function renderCourseClassesList() {
       const d = toLocalDate(s.dateStr);
       const isPast = s.dateStr < todayStr;
       const isToday = s.dateStr === todayStr;
-      const st = SLOT_TIMES[s.slot] || {};
+      const st = sessionTimes(s);
       const now = new Date();
       const slotStart = st.start ? st.start.split(':').map(Number) : null;
       const hasStartedToday = isToday && slotStart && (now.getHours() * 60 + now.getMinutes()) >= slotStart[0] * 60 + slotStart[1];
       const canTakeNotes = !s.is_special && (isPast || hasStartedToday);
-      const noteSessionInfo = JSON.stringify({date: s.dateStr, slot: s.slot, subject_raw: s.subject_raw, course: s.course || currentModalCourse}).replace(/"/g, '&quot;');
+      const noteSessionInfo = JSON.stringify({date: s.dateStr, slot: s.slot, start_time: s.start_time, end_time: s.end_time, is_off_slot: s.is_off_slot, subject_raw: s.subject_raw, course: s.course || currentModalCourse}).replace(/"/g, '&quot;');
 
       const weekday = d.toLocaleDateString('en-IN', { weekday: 'short' });
       const dayNum = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
       const dateDisplay = `${weekday}, ${dayNum}`;
 
-      const timeRange = st.start && st.end ? `${formatTime(st.start)} – ${formatTime(st.end)}` : (st.label || `Slot ${s.slot}`);
+      const timeRange = sessionTimeRange(s);
 
       let statusHtml = '';
       let rowClass = '';
@@ -1514,15 +1536,14 @@ function renderCourseClassesList() {
       const sessionTitle = escHtml(s.subject_raw || (currentModalCourse ? currentModalCourse.name : 'Class'));
 
       html += `
-        <div class="cc-class-row ${rowClass}">
+        <div class="cc-class-row ${rowClass}${s.is_off_slot ? ' off-slot-session' : ''}">
           <div class="cc-class-num">#${overallIdx++}</div>
           <div class="cc-row-left">
             <div class="cc-date-str">${dateDisplay}</div>
-            <div class="cc-slot-info">Slot ${s.slot}</div>
+            <div class="cc-slot-info">${timeRange}</div>
           </div>
           <div class="cc-row-main">
-            <div class="cc-session-title" title="${sessionTitle}">${sessionTitle}</div>
-            <div class="cc-session-time">${timeRange}</div>
+            <div class="cc-session-title" title="${sessionTitle}">${sessionTitle}${s.is_off_slot ? '<span class="off-slot-mark">Off-slot</span>' : ''}</div>
             ${s.notes ? `<div class="cc-session-notes">📝 ${escHtml(s.notes)}</div>` : ''}
           </div>
           ${statusHtml}
@@ -1615,18 +1636,17 @@ function renderEndedSessionsList(sessions, course) {
       const d = toLocalDate(s.date);
       const weekday = d.toLocaleDateString('en-IN', { weekday: 'short' });
       const dayNum  = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-      const st = SLOT_TIMES[s.slot] || {};
-      const timeRange = st.start && st.end ? `${formatTime(st.start)} – ${formatTime(st.end)}` : `Slot ${s.slot}`;
+      const timeRange = sessionTimeRange(s);
       const title = escHtml(s.subject_raw || (course ? course.name : 'Class'));
       html += `
-        <div class="cc-class-row cn-session-row" onclick="openClassNotesModal(${s.id}, ${JSON.stringify({date: s.date, slot: s.slot, subject_raw: s.subject_raw, course: s.course}).replace(/"/g, '&quot;')})">
+        <div class="cc-class-row cn-session-row${s.is_off_slot ? ' off-slot-session' : ''}" onclick="openClassNotesModal(${s.id}, ${JSON.stringify({date: s.date, slot: s.slot, start_time: s.start_time, end_time: s.end_time, is_off_slot: s.is_off_slot, subject_raw: s.subject_raw, course: s.course}).replace(/"/g, '&quot;')})">
           <div class="cc-class-num">#${idx++}</div>
           <div class="cc-row-left">
             <div class="cc-date-str">${weekday}, ${dayNum}</div>
             <div class="cc-slot-info">${timeRange}</div>
           </div>
           <div class="cc-row-main">
-            <div class="cc-session-title">${title}</div>
+            <div class="cc-session-title">${title}${s.is_off_slot ? '<span class="off-slot-mark">Off-slot</span>' : ''}</div>
           </div>
           <div class="cn-view-notes-btn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -1668,8 +1688,7 @@ async function openClassNotesModal(sessionId, sessionInfo) {
   if (el('csnSessionDate')) el('csnSessionDate').textContent = `${weekday}, ${dayNum}`;
   if (el('csnSessionTitle')) el('csnSessionTitle').textContent = escHtml(sessionInfo.subject_raw || (course ? course.name : 'Class Notes'));
 
-  const st = SLOT_TIMES[sessionInfo.slot] || {};
-  const timeRange = st.start && st.end ? `${formatTime(st.start)} – ${formatTime(st.end)}` : `Slot ${sessionInfo.slot}`;
+  const timeRange = sessionTimeRange(sessionInfo);
   if (el('csnSessionTime')) el('csnSessionTime').textContent = timeRange;
 
   // Reset form to create mode

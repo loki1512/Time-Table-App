@@ -7,10 +7,55 @@ portable when migrating to Supabase (just swap the DB calls).
 """
 
 import openpyxl
+import re
 from datetime import datetime
 
 from extensions import db
 from models import Course, ClassSession, TimeSlot, User
+
+
+def parse_session_time_range(text):
+    """Return (start, end) as HH:MM for a clear interval in session text.
+
+    Unrecognized or ambiguous values return (None, None), allowing callers to
+    retain the configured slot time.
+    """
+    if not text:
+        return None, None
+    value = str(text)
+    # Accommodate the workbook's inconsistent "11:45 - Am to 01:15 Pm" form.
+    value = re.sub(
+        r'(\d{1,2}:\d{2})\s*[-–—]\s*(AM|PM)\s+to\s+(\d{1,2}:\d{2})\s*(AM|PM)',
+        r'\1 \2 to \3 \4', value, flags=re.IGNORECASE,
+    )
+    match = re.search(
+        r'(?<!\d)(\d{1,2}):(\d{2})\s*(AM|PM)?\s*'
+        r'(?:-|–|—|\bto\b)\s*'
+        r'(\d{1,2}):(\d{2})\s*(AM|PM)?(?!\d)',
+        value, flags=re.IGNORECASE,
+    )
+    if not match:
+        return None, None
+    h1, m1, ap1, h2, m2, ap2 = match.groups()
+    ap1, ap2 = (ap1 or ap2), (ap2 or ap1)
+
+    def to_minutes(hour, minute, meridiem):
+        hour, minute = int(hour), int(minute)
+        if minute > 59:
+            return None
+        if meridiem:
+            if not 1 <= hour <= 12:
+                return None
+            hour = hour % 12 + (12 if meridiem.upper() == 'PM' else 0)
+        elif hour > 23:
+            return None
+        return hour * 60 + minute
+
+    start = to_minutes(h1, m1, ap1)
+    end = to_minutes(h2, m2, ap2)
+    if start is None or end is None or end <= start:
+        return None, None
+    return f'{start // 60:02d}:{start % 60:02d}', f'{end // 60:02d}:{end % 60:02d}'
 
 # ─── Last-sync timestamp (in-process, resets on server restart) ───────────────
 _last_sync_time: datetime | None = None
@@ -252,6 +297,7 @@ def import_excel(source):
             ])
             abbr = parse_subject_abbr(text)
             course_obj = courses_by_short.get(abbr) if abbr else None
+            start_time, end_time = parse_session_time_range(text)
 
             new_excel_keys.add((date_val, slot_num))
 
@@ -262,10 +308,13 @@ def import_excel(source):
 
             if existing:
                 if is_locked:
-                    # Already happened — never touch it
+                    # Preserve historical schedule data, but backfill only the
+                    # new interval metadata when this additive feature is first imported.
+                    existing.start_time, existing.end_time = start_time, end_time
                     continue
                 # Future session: update schedule metadata only (preserve admin notes)
                 existing.subject_raw = text
+                existing.start_time, existing.end_time = start_time, end_time
                 existing.course_id   = course_obj.id if course_obj else None
                 existing.is_special  = is_special
                 existing.day_name    = day_name
@@ -275,6 +324,8 @@ def import_excel(source):
                     date=date_val,
                     day_name=day_name,
                     slot=slot_num,
+                    start_time=start_time,
+                    end_time=end_time,
                     subject_raw=text,
                     course_id=course_obj.id if course_obj else None,
                     is_special=is_special,
@@ -577,4 +628,36 @@ def create_default_admin():
         db.session.commit()
         print('[OK] Default admin created: admin / admin123')
     seed_default_slots()
+    
+def export_timetable_json():
+    """Export the entire timetable as a JSON-serializable dict."""
+    from models import ClassSession, TimeSlot, Course
+    slots_dict = get_slots_dict()
+    sessions = ClassSession.query.order_by(ClassSession.date, ClassSession.slot).all()
+    timetable = []
+    for s in sessions:
+        course_info = {
+            'id': s.course.id if s.course else None,
+            'code': s.course.code if s.course else None,
+            'name': s.course.name if s.course else None,
+            'short_name': s.course.short_name if s.course else None,
+            'color': s.course.color if s.course else None,
+        } if s.course else None
+        timetable.append({
+            'date': s.date.isoformat(),
+            'day_name': s.day_name,
+            'slot_number': s.slot,
+            'slot_label': slots_dict.get(s.slot, {}).get('label'),
+            'start_time': s.start_time or slots_dict.get(s.slot, {}).get('start', ''),
+            'end_time': s.end_time or slots_dict.get(s.slot, {}).get('end', ''),
+            'subject_raw': s.subject_raw,
+            'is_special': s.is_special,
+            'course': course_info,
+        })
+    return {
+        'last_sync_time': _last_sync_time.isoformat() if _last_sync_time else None,
+        'slots': slots_dict,
+        'timetable': timetable
+    }
+    
 

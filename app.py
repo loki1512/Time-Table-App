@@ -30,6 +30,20 @@ def create_app(config_class=Config):
     login_manager.init_app(app)
     migrate.init_app(app, db)
 
+    # Add the optional per-session interval fields to existing databases.
+    # This is deliberately additive: slot and TimeSlot remain unchanged.
+    with app.app_context():
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        if 'class_session' in inspector.get_table_names():
+            columns = {column['name'] for column in inspector.get_columns('class_session')}
+            with db.engine.begin() as connection:
+                for column in ('start_time', 'end_time'):
+                    if column not in columns:
+                        connection.exec_driver_sql(
+                            f'ALTER TABLE class_session ADD COLUMN {column} VARCHAR(5)'
+                        )
+
     # ── Register blueprints ───────────────────────────────────────────────────
     app.register_blueprint(main_bp)
     app.register_blueprint(admin_bp)

@@ -827,6 +827,15 @@ svg {
   opacity: 0.9;
 }
 
+.session-card.off-slot-session {
+  border-color: rgba(251, 146, 60, 0.7);
+  background: linear-gradient(110deg, rgba(251, 146, 60, 0.10), var(--surface) 48%);
+}
+
+.session-card.off-slot-session::before {
+  background: #fb923c;
+}
+
 @keyframes pulse-border {
 
   0%,
@@ -842,11 +851,11 @@ svg {
 .session-time-col {
   flex-shrink: 0;
   text-align: center;
-  width: 72px;
+  width: 126px;
 }
 
 .session-time-slot {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-3);
   font-weight: 600;
   margin-bottom: 4px;
@@ -900,6 +909,23 @@ svg {
   background: rgba(251, 191, 36, 0.13);
   color: var(--warning);
   border-color: rgba(251, 191, 36, 0.22);
+}
+
+.session-badge.off-slot-badge,
+.off-slot-mark,
+.admin-off-slot-mark {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border: 1px solid rgba(251, 146, 60, 0.48);
+  border-radius: 999px;
+  background: rgba(251, 146, 60, 0.14);
+  color: #fdba74;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.25;
+  vertical-align: middle;
+  white-space: nowrap;
 }
 
 .session-faculty {
@@ -1061,6 +1087,11 @@ svg {
   border-left: 3px solid var(--course-color, var(--accent));
 }
 
+.week-session-item.off-slot-session {
+  border-left-color: #fb923c;
+  background: rgba(251, 146, 60, 0.08);
+}
+
 .week-session-item:hover {
   background: var(--bg-4);
 }
@@ -1070,7 +1101,7 @@ svg {
   color: var(--text-2);
   font-weight: 600;
   flex-shrink: 0;
-  width: 72px;
+  width: 126px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2932,6 +2963,11 @@ a.course-card-link:hover .course-link-hint {
   white-space: nowrap;
 }
 
+.cc-class-row.off-slot-session {
+  border-left: 3px solid #fb923c;
+  background: rgba(251, 146, 60, 0.055);
+}
+
 .cc-session-time {
   font-size: 12px;
   color: var(--accent-2);
@@ -3032,7 +3068,7 @@ a.course-card-link:hover .course-link-hint {
   }
 
   .session-time-col {
-    width: 62px;
+    width: 112px;
   }
 
   .toast {

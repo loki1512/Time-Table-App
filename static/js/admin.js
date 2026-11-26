@@ -114,6 +114,17 @@ function slotLabel(slot) {
   return m[slot] || `Slot ${slot}`;
 }
 
+function adminSessionTimeRange(session) {
+  const format = value => {
+    if (!value) return '';
+    const [hour, minute] = value.split(':').map(Number);
+    return `${hour % 12 || 12}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`;
+  };
+  return session.start_time && session.end_time
+    ? `${format(session.start_time)} – ${format(session.end_time)}`
+    : slotLabel(session.slot);
+}
+
 function renderAdminSessions(sessions) {
   if (sessions.length === 0) {
     el('adminSessionsList').innerHTML = '<div class="loading-text">No sessions found for selected range.</div>';
@@ -129,7 +140,7 @@ function renderAdminSessions(sessions) {
           <div class="asi-date-month">${d.toLocaleDateString('en-IN',{month:'short'})}</div>
         </div>
         <div class="asi-slot-col">
-          <div>${slotLabel(s.slot)}</div>
+          <div>${adminSessionTimeRange(s)}${s.is_off_slot ? '<span class="admin-off-slot-mark">Off-slot</span>' : ''}</div>
           <div style="font-size:10px;color:var(--text-3)">Slot ${s.slot}</div>
         </div>
         <div class="asi-content">

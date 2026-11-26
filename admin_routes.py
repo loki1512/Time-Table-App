@@ -14,7 +14,7 @@ from flask_login import login_required, current_user
 
 from extensions import db
 from models import Course, ClassSession, TimeSlot, User, Notification
-from helpers import import_excel
+from helpers import import_excel, parse_session_time_range
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -49,11 +49,15 @@ def create_session():
     if existing:
         return jsonify({'error': 'Session already exists for this date and slot'}), 409
 
+    subject_raw = data.get('subject_raw', '')
+    start_time, end_time = parse_session_time_range(subject_raw)
     session_obj = ClassSession(
         date=date_val,
         day_name=date_val.strftime('%A'),
         slot=slot,
-        subject_raw=data.get('subject_raw', ''),
+        subject_raw=subject_raw,
+        start_time=start_time,
+        end_time=end_time,
         course_id=data.get('course_id') or None,
         is_special=data.get('is_special', False),
         notes=data.get('notes', ''),
@@ -104,6 +108,7 @@ def update_session(session_id):
 
     if 'subject_raw' in data:
         session_obj.subject_raw = data['subject_raw']
+        session_obj.start_time, session_obj.end_time = parse_session_time_range(data['subject_raw'])
     if 'course_id' in data:
         session_obj.course_id = data['course_id'] or None
     if 'is_special' in data:
